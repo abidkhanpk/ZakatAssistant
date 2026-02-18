@@ -1,0 +1,3 @@
+export default function AdminNotifications() {
+  return <main className="p-4"><form className="card max-w-xl space-y-2" method="post" action="/api/admin/notifications"><h1 className="text-xl font-bold">Broadcast notification</h1><input className="w-full border rounded p-2" name="titleEn" placeholder="Title EN" required /><textarea className="w-full border rounded p-2" name="bodyEn" placeholder="Body EN" required/><input className="w-full border rounded p-2" name="titleUr" placeholder="Title UR" required /><textarea className="w-full border rounded p-2" name="bodyUr" placeholder="Body UR" required/><button className="rounded bg-brand text-white p-2">Send</button></form></main>;
+}

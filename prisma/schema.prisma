@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum CalendarType {
+  ISLAMIC
+  GREGORIAN
+}
+
+enum CategoryType {
+  ASSET
+  LIABILITY
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+}
+
+model User {
+  id                String                    @id @default(cuid())
+  username          String                    @unique
+  email             String                    @unique
+  name              String
+  passwordHash      String
+  role              Role                      @default(USER)
+  emailVerifiedAt   DateTime?
+  preferredLocale   String                    @default("en")
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  records           ZakatRecord[]
+  verificationTokens EmailVerificationToken[]
+  sentNotifications Notification[]            @relation("SentByAdmin")
+  notifications     Notification[]            @relation("RecipientNotifications")
+  deliveryLogs      NotificationDeliveryLog[]
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  encrypted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ZakatRecord {
+  id                 String       @id @default(cuid())
+  userId             String
+  yearLabel          String
+  calculationDate    DateTime
+  calendarType       CalendarType
+  zakatRate          Decimal      @db.Decimal(5, 4)
+  currency           String       @default("PKR")
+  totalAssets        Decimal      @db.Decimal(18, 2)
+  totalDeductions    Decimal      @db.Decimal(18, 2)
+  netZakatable       Decimal      @db.Decimal(18, 2)
+  zakatPayable       Decimal      @db.Decimal(18, 2)
+  clonedFromRecordId String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categories         Category[]
+
+  @@index([userId, yearLabel])
+}
+
+model Category {
+  id        String       @id @default(cuid())
+  recordId  String?
+  type      CategoryType
+  nameEn    String
+  nameUr    String
+  isDefault Boolean      @default(false)
+  sortOrder Int          @default(0)
+  record    ZakatRecord? @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  items     LineItem[]
+
+  @@index([recordId, type])
+}
+
+model LineItem {
+  id          String   @id @default(cuid())
+  categoryId  String
+  description String
+  quantity    Decimal? @db.Decimal(18, 3)
+  unitPrice   Decimal? @db.Decimal(18, 2)
+  amount      Decimal  @db.Decimal(18, 2)
+  sortOrder   Int      @default(0)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id               String                    @id @default(cuid())
+  recipientUserId  String?
+  titleEn          String
+  bodyEn           String
+  titleUr          String
+  bodyUr           String
+  sentByAdminId    String?
+  createdAt        DateTime                  @default(now())
+  readAt           DateTime?
+  recipient        User?                     @relation("RecipientNotifications", fields: [recipientUserId], references: [id], onDelete: Cascade)
+  sender           User?                     @relation("SentByAdmin", fields: [sentByAdminId], references: [id], onDelete: SetNull)
+  deliveryLogs     NotificationDeliveryLog[]
+}
+
+model NotificationDeliveryLog {
+  id             String              @id @default(cuid())
+  notificationId String
+  userId         String
+  channel        NotificationChannel
+  status         String
+  error          String?
+  sentAt         DateTime            @default(now())
+  notification   Notification        @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
