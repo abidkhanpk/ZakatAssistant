@@ -1,9 +1,26 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
-export default async function NotificationsPage() {
+export default async function NotificationsPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
-  if (!user) return <main className="p-4">Please login</main>;
-  const notifications = await prisma.notification.findMany({ where: { OR: [{ recipientUserId: null }, { recipientUserId: user.id }] }, orderBy: { createdAt: 'desc' } });
-  return <main className="p-4 space-y-2">{notifications.map((n)=><div key={n.id} className="card"><h3>{n.titleEn}</h3><p>{n.bodyEn}</p></div>)}</main>;
+  if (!user) redirect(`/${params.locale}/login`);
+
+  const notifications = await prisma.notification.findMany({
+    where: { OR: [{ recipientUserId: null }, { recipientUserId: user.id }] },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  const isUr = params.locale === 'ur';
+
+  return (
+    <main className="mx-auto max-w-3xl space-y-2 p-4">
+      {notifications.map((notification) => (
+        <div key={notification.id} className="card">
+          <h3 className="font-semibold">{isUr ? notification.titleUr : notification.titleEn}</h3>
+          <p className="text-sm text-slate-700">{isUr ? notification.bodyUr : notification.bodyEn}</p>
+        </div>
+      ))}
+    </main>
+  );
 }

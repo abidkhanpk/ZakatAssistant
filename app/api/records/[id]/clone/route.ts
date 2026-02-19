@@ -2,15 +2,78 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { calculateZakat } from '@/lib/zakat';
+import { isSameOrigin } from '@/lib/security';
+import { hasValidCsrfToken } from '@/lib/csrf';
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'Invalid origin' }, { status: 403 });
+
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const existing = await prisma.zakatRecord.findUnique({ where: { id: params.id }, include: { categories: { include: { items: true } } } });
+
+  const formData = await req.formData();
+  if (!hasValidCsrfToken(req, formData)) return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
+
+  const form = Object.fromEntries(formData);
+  const locale = String(form.locale || 'en');
+
+  const existing = await prisma.zakatRecord.findFirst({
+    where: { id: params.id, userId: user.id },
+    include: { categories: { include: { items: true }, orderBy: { sortOrder: 'asc' } } }
+  });
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  const assets = existing.categories.filter((c) => c.type === 'ASSET').map((c) => ({ items: c.items.map((i) => ({ amount: Number(i.amount) })) }));
-  const liabilities = existing.categories.filter((c) => c.type === 'LIABILITY').map((c) => ({ items: c.items.map((i) => ({ amount: Number(i.amount) })) }));
+
+  const assets = existing.categories
+    .filter((c) => c.type === 'ASSET')
+    .map((c) => ({ items: c.items.map((i) => ({ amount: Number(i.amount) })) }));
+  const liabilities = existing.categories
+    .filter((c) => c.type === 'LIABILITY')
+    .map((c) => ({ items: c.items.map((i) => ({ amount: Number(i.amount) })) }));
+
   const totals = calculateZakat({ calendarType: existing.calendarType, assets, liabilities });
-  const clone = await prisma.zakatRecord.create({ data: { userId: user.id, yearLabel: `${Number(existing.yearLabel) + 1}`, calculationDate: new Date(), calendarType: existing.calendarType, zakatRate: totals.zakatRate, currency: existing.currency, totalAssets: totals.totalAssets, totalDeductions: totals.totalDeductions, netZakatable: totals.netZakatable, zakatPayable: totals.zakatPayable, clonedFromRecordId: existing.id } });
-  return NextResponse.json({ id: clone.id });
+
+  const nextYearLabel = String((Number(existing.yearLabel) || new Date().getFullYear()) + 1);
+
+  const clone = await prisma.zakatRecord.create({
+    data: {
+      userId: user.id,
+      yearLabel: nextYearLabel,
+      calculationDate: new Date(),
+      calendarType: existing.calendarType,
+      zakatRate: totals.zakatRate,
+      currency: existing.currency,
+      totalAssets: totals.totalAssets,
+      totalDeductions: totals.totalDeductions,
+      netZakatable: totals.netZakatable,
+      zakatPayable: totals.zakatPayable,
+      clonedFromRecordId: existing.id
+    }
+  });
+
+  for (const category of existing.categories) {
+    const createdCategory = await prisma.category.create({
+      data: {
+        recordId: clone.id,
+        type: category.type,
+        nameEn: category.nameEn,
+        nameUr: category.nameUr,
+        sortOrder: category.sortOrder
+      }
+    });
+
+    for (const item of category.items) {
+      await prisma.lineItem.create({
+        data: {
+          categoryId: createdCategory.id,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          amount: item.amount,
+          sortOrder: item.sortOrder
+        }
+      });
+    }
+  }
+
+  return NextResponse.redirect(new URL(`/${locale}/app/records/${clone.id}`, req.url), 303);
 }

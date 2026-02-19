@@ -2,12 +2,19 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword, signSession, setAuthCookieOnResponse } from '@/lib/auth';
+import { isSameOrigin } from '@/lib/security';
+import { hasValidCsrfToken } from '@/lib/csrf';
 
 const schema = z.object({ email: z.string().email(), password: z.string(), locale: z.string().default('en') });
 
 export async function POST(req: Request) {
+  if (!isSameOrigin(req)) return NextResponse.json({ error: 'Invalid origin' }, { status: 403 });
+
   try {
-    const form = Object.fromEntries(await req.formData());
+    const formData = await req.formData();
+    if (!hasValidCsrfToken(req, formData)) return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
+
+    const form = Object.fromEntries(formData);
     const parsed = schema.safeParse(form);
     const locale = parsed.success ? parsed.data.locale : 'en';
 

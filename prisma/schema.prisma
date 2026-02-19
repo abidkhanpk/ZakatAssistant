@@ -40,9 +40,20 @@ model User {
   updatedAt         DateTime                  @updatedAt
   records           ZakatRecord[]
   verificationTokens EmailVerificationToken[]
+  resetTokens       PasswordResetToken[]
   sentNotifications Notification[]            @relation("SentByAdmin")
   notifications     Notification[]            @relation("RecipientNotifications")
   deliveryLogs      NotificationDeliveryLog[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model EmailVerificationToken {

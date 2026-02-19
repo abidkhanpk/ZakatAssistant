@@ -1,17 +1,12 @@
-import { PrismaClient, Role, CategoryType } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import argon2 from 'argon2';
+import { defaultCategoryTemplates } from '../lib/default-categories';
 
 const prisma = new PrismaClient();
 
-const defaultCategories = [
-  { type: CategoryType.ASSET, nameEn: 'Gold', nameUr: 'سونا', sortOrder: 1 },
-  { type: CategoryType.ASSET, nameEn: 'Property purchased for onward sale', nameUr: 'فروخت کے لیے خریدی گئی جائیداد', sortOrder: 2 },
-  { type: CategoryType.ASSET, nameEn: 'Cash & bank accounts', nameUr: 'نقدی اور بینک اکاؤنٹس', sortOrder: 3 },
-  { type: CategoryType.ASSET, nameEn: 'Receivable loans', nameUr: 'قابل وصول قرضے', sortOrder: 4 },
-  { type: CategoryType.ASSET, nameEn: 'BC deposits not yet received', nameUr: 'بی سی ڈپازٹس جو ابھی وصول نہیں ہوئے', sortOrder: 5 },
-  { type: CategoryType.LIABILITY, nameEn: 'Payable loans', nameUr: 'واجب الادا قرضے', sortOrder: 1 },
-  { type: CategoryType.LIABILITY, nameEn: 'BC balance installments received', nameUr: 'موصول شدہ بی سی بقایا اقساط', sortOrder: 2 }
-];
+function toSeedId(name: string, type: 'ASSET' | 'LIABILITY') {
+  return `default-${type.toLowerCase()}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+}
 
 async function main() {
   const password = 'admin123';
@@ -33,19 +28,23 @@ async function main() {
     }
   });
 
-  for (const category of defaultCategories) {
+  for (const category of defaultCategoryTemplates) {
     await prisma.category.upsert({
-      where: {
-        id: `${category.type}-${category.sortOrder}`
-      },
+      where: { id: toSeedId(category.nameEn, category.type) },
       create: {
-        id: `${category.type}-${category.sortOrder}`,
-        ...category,
-        isDefault: true
+        id: toSeedId(category.nameEn, category.type),
+        type: category.type,
+        nameEn: category.nameEn,
+        nameUr: category.nameUr,
+        isDefault: true,
+        sortOrder: defaultCategoryTemplates.indexOf(category)
       },
       update: {
-        ...category,
-        isDefault: true
+        type: category.type,
+        nameEn: category.nameEn,
+        nameUr: category.nameUr,
+        isDefault: true,
+        sortOrder: defaultCategoryTemplates.indexOf(category)
       }
     });
   }

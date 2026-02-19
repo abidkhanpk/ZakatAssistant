@@ -10,7 +10,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
       dir={isUr ? 'rtl' : 'ltr'}
       style={{
         fontFamily: isUr
-          ? '"Noto Nastaliq Urdu", "Noto Naskh Arabic", Georgia, serif'
+          ? '"Gulzar", "Noto Nastaliq Urdu", "Noto Naskh Arabic", Georgia, serif'
           : 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
       }}
     >
