@@ -1,17 +1,22 @@
-import { NextResponse } from 'next/server';
+import createMiddleware from 'next-intl/middleware';
 import type { NextRequest } from 'next/server';
+import { routing } from './i18n/routing';
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.includes('.')) return NextResponse.next();
-  if (!/^\/(en|ur)(\/|$)/.test(pathname)) {
-    return NextResponse.redirect(new URL(`/en${pathname}`, req.url));
-  }
-  const response = NextResponse.next();
+const handleI18nRouting = createMiddleware(routing);
+
+export default function middleware(req: NextRequest) {
+  const response = handleI18nRouting(req);
+
   if (!req.cookies.get('csrf_token')) {
-    response.cookies.set('csrf_token', crypto.randomUUID(), { sameSite: 'lax', httpOnly: true });
+    response.cookies.set('csrf_token', crypto.randomUUID(), {
+      sameSite: 'lax',
+      httpOnly: true
+    });
   }
+
   return response;
 }
 
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'] };
+export const config = {
+  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)']
+};

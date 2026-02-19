@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 import argon2 from 'argon2';
 import { prisma } from './prisma';
+import type { NextResponse } from 'next/server';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret');
 
@@ -22,8 +23,19 @@ export async function signSession(userId: string, role: string) {
     .sign(secret);
 }
 
+const authCookieOptions = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production',
+  path: '/'
+};
+
+export function setAuthCookieOnResponse(response: NextResponse, token: string) {
+  response.cookies.set('za_session', token, authCookieOptions);
+}
+
 export async function setAuthCookie(token: string) {
-  cookies().set('za_session', token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/' });
+  cookies().set('za_session', token, authCookieOptions);
 }
 
 export function clearAuthCookie() {
