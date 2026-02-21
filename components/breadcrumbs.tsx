@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Home as HomeIcon } from 'lucide-react';
 
 const labels: Record<string, { en: string; ur: string }> = {
-  app: { en: 'App', ur: 'ایپ' },
   records: { en: 'Records', ur: 'ریکارڈز' },
   new: { en: 'New', ur: 'نیا' },
   notifications: { en: 'Notifications', ur: 'اطلاعات' },
@@ -26,23 +26,46 @@ export function Breadcrumbs({ locale }: { locale: 'en' | 'ur' }) {
   const segments = pathname.split('/').filter(Boolean);
   const withoutLocale = segments[0] === 'en' || segments[0] === 'ur' ? segments.slice(1) : segments;
 
-  const crumbs = withoutLocale.map((seg, idx) => ({
-    label: pretty(seg, locale),
-    href: `/${locale}/${withoutLocale.slice(0, idx + 1).join('/')}`
-  }));
+  const crumbs = withoutLocale
+    .map((seg, idx) => ({
+      segment: seg,
+      label: pretty(seg, locale),
+      href: `/${locale}/${withoutLocale.slice(0, idx + 1).join('/')}`
+    }))
+    .filter((crumb) => crumb.segment.toLowerCase() !== 'app');
+  const allCrumbs = [{ label: locale === 'ur' ? 'ہوم' : 'Home', href: `/${locale}`, isHome: true }, ...crumbs.map((crumb) => ({ ...crumb, isHome: false }))];
 
   return (
-    <nav className="text-sm text-slate-500" aria-label={locale === 'ur' ? 'بریڈکرَمب' : 'Breadcrumb'}>
-      <ol className="flex flex-wrap items-center gap-2">
-        <li>
-          <Link href={`/${locale}`} className="hover:underline">{locale === 'ur' ? 'ہوم' : 'Home'}</Link>
-        </li>
-        {crumbs.map((crumb) => (
-          <li key={crumb.href} className="flex items-center gap-2">
-            <span>/</span>
-            <Link href={crumb.href} className="hover:underline">{crumb.label}</Link>
-          </li>
-        ))}
+    <nav className="text-sm" aria-label={locale === 'ur' ? 'بریڈکرَمب' : 'Breadcrumb'}>
+      <ol className="breadcrumbs">
+        {allCrumbs.map((crumb, idx) => {
+          const isFirst = idx === 0;
+          const isLast = idx === allCrumbs.length - 1;
+          const wordCount = crumb.label.trim().split(/\s+/).filter(Boolean).length;
+          const shouldCollapse = !isFirst && !isLast && (wordCount > 5 || crumb.label.length > 28);
+          const fullWidth = Math.max(130, crumb.label.length * 10 + 42);
+          return (
+            <li
+              key={crumb.href}
+              className={`${isFirst ? 'first' : ''} ${isLast ? 'active' : ''}`}
+              style={{ ['--crumb-full' as string]: `${fullWidth}px` }}
+            >
+              <Link
+                href={crumb.href}
+                className={shouldCollapse ? 'is-collapsed' : ''}
+                aria-label={crumb.isHome ? (locale === 'ur' ? 'ہوم' : 'Home') : undefined}
+              >
+                {crumb.isHome ? (
+                  <span className="crumb-home-icon" aria-hidden="true">
+                    <HomeIcon size={16} strokeWidth={2} />
+                  </span>
+                ) : (
+                  <span>{crumb.label}</span>
+                )}
+              </Link>
+            </li>
+          );
+        })}
       </ol>
     </nav>
   );

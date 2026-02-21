@@ -7,3 +7,137 @@
 :root { color-scheme: light; }
 body { @apply bg-slate-50 text-slate-900; }
 .card { @apply rounded-2xl border bg-white p-4 shadow-sm; }
+
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  overflow-x: auto;
+  margin: 0;
+  padding: 0.25rem 0;
+  list-style: none;
+}
+
+.breadcrumbs li {
+  margin: 0;
+  position: relative;
+}
+
+.breadcrumbs li + li {
+  margin-left: 1px;
+}
+
+.breadcrumbs li a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 2.35rem;
+  padding: 0 1rem 0 1.75rem;
+  border: 1px solid #d8e0ea;
+  border-left: 0;
+  background: linear-gradient(#ffffff, #f7fafc);
+  color: #475569;
+  text-decoration: none;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, width 280ms ease;
+  z-index: 1;
+}
+
+.breadcrumbs li a::before,
+.breadcrumbs li a::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: translateY(-50%);
+  border-top: 19px solid transparent;
+  border-bottom: 19px solid transparent;
+}
+
+.breadcrumbs li a::before {
+  left: 100%;
+  border-left: 13px solid #d8e0ea;
+  z-index: 1;
+}
+
+.breadcrumbs li a::after {
+  left: calc(100% - 1px);
+  border-left: 13px solid #f7fafc;
+  z-index: 2;
+}
+
+.breadcrumbs li.first a {
+  padding-left: 1rem;
+  border-left: 1px solid #d8e0ea;
+  border-radius: 0.55rem 0 0 0.55rem;
+}
+
+.breadcrumbs li.first a::before,
+.breadcrumbs li.first a::after {
+  content: none;
+}
+
+.breadcrumbs li.active a {
+  border-color: rgb(11 143 95 / 0.45);
+  background: linear-gradient(rgb(11 143 95 / 0.18), rgb(11 143 95 / 0.12));
+  color: #066a45;
+  font-weight: 600;
+  border-radius: 0 0.55rem 0.55rem 0;
+  padding-right: 1rem;
+}
+
+.breadcrumbs li.active a::before,
+.breadcrumbs li.active a::after {
+  content: none;
+}
+
+.breadcrumbs li:not(.first):not(.active) a.is-collapsed {
+  width: 75px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.breadcrumbs li:not(.first):not(.active):hover a,
+.breadcrumbs li:not(.first):not(.active):focus-within a {
+  width: var(--crumb-full, 170px);
+  border-color: rgb(11 143 95 / 0.3);
+  color: #0b8f5f;
+  background: linear-gradient(#ffffff, #f5fbf8);
+}
+
+.breadcrumbs li:not(.first):not(.active):hover a::before,
+.breadcrumbs li:not(.first):not(.active):focus-within a::before {
+  border-left-color: rgb(11 143 95 / 0.3);
+}
+
+.breadcrumbs li:not(.first):not(.active):hover a::after,
+.breadcrumbs li:not(.first):not(.active):focus-within a::after {
+  border-left-color: #f5fbf8;
+}
+
+.breadcrumbs li.first:hover a,
+.breadcrumbs li.first:focus-within a,
+.breadcrumbs li.active:hover a,
+.breadcrumbs li.active:focus-within a {
+  border-color: rgb(11 143 95 / 0.35);
+  color: #0b8f5f;
+  background: linear-gradient(#ffffff, #f5fbf8);
+}
+
+.crumb-home-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.breadcrumbs li.active a:hover,
+.breadcrumbs li.active a:focus-visible,
+.breadcrumbs li.first a:hover,
+.breadcrumbs li.first a:focus-visible {
+  border-color: rgb(11 143 95 / 0.35);
+  color: #0b8f5f;
+  background: linear-gradient(#ffffff, #f5fbf8);
+}

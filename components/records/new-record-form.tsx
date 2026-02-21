@@ -17,6 +17,7 @@ type Category = {
   type: 'ASSET' | 'LIABILITY';
   items: Item[];
   collapsed: boolean;
+  isCustom: boolean;
 };
 
 export type RecordFormInitialData = {
@@ -44,8 +45,13 @@ function toCategory(template: CategoryTemplate, idx: number, isUr: boolean): Cat
     nameUr: template.nameUr,
     type: template.type,
     items: template.items.map((item) => ({ ...item, description: localizeDefaultDescription(item.description, isUr) })),
-    collapsed: false
+    collapsed: false,
+    isCustom: false
   };
+}
+
+function isCustomCategoryName(nameEn: string, nameUr: string) {
+  return nameEn.toLowerCase().startsWith('custom ') || nameUr.includes('کسٹم');
 }
 
 function move<T>(arr: T[], from: number, to: number) {
@@ -85,7 +91,8 @@ export function NewRecordForm({
         nameUr: category.nameUr,
         type: category.type,
         items: category.items.map((item) => ({ ...item })),
-        collapsed: false
+        collapsed: false,
+        isCustom: isCustomCategoryName(category.nameEn, category.nameUr)
       }));
     }
     return defaultCategoryTemplates.map((template, idx) => toCategory(template, idx, isUr));
@@ -116,7 +123,8 @@ export function NewRecordForm({
           nameUr: type === 'ASSET' ? 'کسٹم اثاثہ زمرہ' : 'کسٹم واجبات زمرہ',
           type,
           items: [{ description: isUr ? 'تفصیل' : 'Description', amount: 0 }],
-          collapsed: false
+          collapsed: false,
+          isCustom: true
         }
       ];
       if (mode === 'WIZARD') {
@@ -129,6 +137,15 @@ export function NewRecordForm({
   function addItem(categoryIndex: number) {
     setCategories((prev) =>
       prev.map((category, i) => (i === categoryIndex ? { ...category, items: [...category.items, { description: isUr ? 'تفصیل' : 'Description', amount: 0 }] } : category))
+    );
+  }
+
+  function updateCategoryTitle(categoryIndex: number, value: string) {
+    setCategories((prev) =>
+      prev.map((category, i) => {
+        if (i !== categoryIndex) return category;
+        return isUr ? { ...category, nameUr: value || 'زمرہ' } : { ...category, nameEn: value || 'Category' };
+      })
     );
   }
 
@@ -261,7 +278,17 @@ export function NewRecordForm({
                     <tr key={`${category.id}-item-${itemIndex}`} className="border-b align-top">
                       <td className="p-2">{typeLabel(category.type)}</td>
                       <td className="p-2">
-                        {isUr ? category.nameUr : category.nameEn}
+                        {category.isCustom ? (
+                          <input
+                            className="w-full rounded border p-2"
+                            value={isUr ? category.nameUr : category.nameEn}
+                            onChange={(e) => updateCategoryTitle(categoryIndex, e.target.value)}
+                            placeholder={isUr ? 'زمرہ عنوان' : 'Category title'}
+                            dir={isUr ? 'rtl' : 'ltr'}
+                          />
+                        ) : (
+                          isUr ? category.nameUr : category.nameEn
+                        )}
                       </td>
                       <td className="p-2">
                         <input
@@ -320,6 +347,17 @@ export function NewRecordForm({
                   <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => removeCategory(categoryIndex)}>{isUr ? 'حذف' : 'Remove'}</button>
                 </div>
               </div>
+              {category.isCustom ? (
+                <div>
+                  <input
+                    className="w-full rounded border p-2"
+                    value={isUr ? category.nameUr : category.nameEn}
+                    onChange={(e) => updateCategoryTitle(categoryIndex, e.target.value)}
+                    placeholder={isUr ? 'زمرہ عنوان' : 'Category title'}
+                    dir={isUr ? 'rtl' : 'ltr'}
+                  />
+                </div>
+              ) : null}
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
