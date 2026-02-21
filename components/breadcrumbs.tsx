@@ -44,11 +44,12 @@ export function Breadcrumbs({ locale }: { locale: 'en' | 'ur' }) {
           const wordCount = crumb.label.trim().split(/\s+/).filter(Boolean).length;
           const shouldCollapse = !isFirst && !isLast && (wordCount > 5 || crumb.label.length > 28);
           const fullWidth = Math.max(130, crumb.label.length * 10 + 42);
+          const stackOrder = allCrumbs.length - idx;
           return (
             <li
               key={crumb.href}
               className={`${isFirst ? 'first' : ''} ${isLast ? 'active' : ''}`}
-              style={{ ['--crumb-full' as string]: `${fullWidth}px` }}
+              style={{ ['--crumb-full' as string]: `${fullWidth}px`, zIndex: stackOrder }}
             >
               <Link
                 href={crumb.href}
