@@ -1,18 +1,29 @@
+import { getCurrentUser } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { CsrfInput } from '@/components/csrf-input';
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
 
 export default async function Home({ params }: { params: { locale: string } }) {
-  const t = await getTranslations();
+  const isUr = params.locale === 'ur';
+  const user = await getCurrentUser();
+
+  if (user) {
+    redirect(`/${params.locale}/app`);
+  }
+
   return (
-    <main className="min-h-screen p-6">
-      <div className="mx-auto max-w-3xl card space-y-4">
-        <h1 className="text-3xl font-bold">{t('appName')}</h1>
-        <p>{t('welcome')}</p>
-        <div className="flex gap-3">
-          <Link className="rounded-xl bg-brand px-4 py-2 text-white" href={`/${params.locale}/login`}>Login</Link>
-          <Link className="rounded-xl border px-4 py-2" href={`/${params.locale}/signup`}>Sign up</Link>
-        </div>
-      </div>
+    <main className="p-4">
+      <form className="card mx-auto max-w-md space-y-3" method="post" action="/api/auth/login">
+        <CsrfInput />
+        <input type="hidden" name="locale" value={params.locale} />
+        <h1 className="text-2xl font-semibold">{isUr ? 'زکوٰۃ اسسٹنٹ لاگ اِن' : 'ZakatAssistant Login'}</h1>
+        <input className="w-full rounded border p-2" name="identifier" placeholder={isUr ? 'ای میل یا یوزر آئی ڈی' : 'Email or User ID'} required />
+        <input className="w-full rounded border p-2" name="password" type="password" placeholder={isUr ? 'پاس ورڈ' : 'Password'} required />
+        <button className="w-full rounded bg-brand p-2 text-white">{isUr ? 'لاگ اِن' : 'Login'}</button>
+        <Link className="block text-sm text-brand" href={`/${params.locale}/forgot-password`}>
+          {isUr ? 'پاس ورڈ بھول گئے؟' : 'Forgot password?'}
+        </Link>
+      </form>
     </main>
   );
 }

@@ -8,6 +8,7 @@ type UserMenuProps = {
 
 export function UserMenu({ locale, user }: UserMenuProps) {
   const csrf = cookies().get('csrf_token')?.value || '';
+  const isUr = locale === 'ur';
 
   return (
     <details className="relative">
@@ -20,16 +21,16 @@ export function UserMenu({ locale, user }: UserMenuProps) {
         <p className="mt-1 text-xs text-slate-500">{user.role}</p>
         <div className="mt-3 space-y-2 text-sm">
           <Link className="block rounded border px-2 py-1 hover:bg-slate-50" href={`/${locale}/app/profile`}>
-            Profile settings
+            {isUr ? 'پروفائل ترتیبات' : 'Profile settings'}
           </Link>
           <Link className="block rounded border px-2 py-1 hover:bg-slate-50" href={`/${locale}/app/settings`}>
-            User settings
+            {isUr ? 'صارف ترتیبات' : 'User settings'}
           </Link>
           <form method="post" action="/api/auth/logout">
             <input type="hidden" name="csrfToken" value={csrf} />
             <input type="hidden" name="locale" value={locale} />
             <button className="w-full rounded border border-red-200 px-2 py-1 text-left text-red-600 hover:bg-red-50">
-              Sign out
+              {isUr ? 'سائن آؤٹ' : 'Sign out'}
             </button>
           </form>
         </div>
