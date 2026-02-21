@@ -26,17 +26,18 @@ export default async function NewRecordPage({
         include: { categories: { include: { items: true }, orderBy: { sortOrder: 'asc' } } }
       })
     : null;
+  type SourceRecord = NonNullable<typeof sourceRecord>;
 
   const initialData = sourceRecord
     ? {
         recordId: editRecordId ? sourceRecord.id : undefined,
         yearLabel: editRecordId ? sourceRecord.yearLabel : String(new Date().getFullYear()),
         calendarType: sourceRecord.calendarType,
-        categories: sourceRecord.categories.map((category) => ({
+        categories: sourceRecord.categories.map((category: SourceRecord['categories'][number]) => ({
           nameEn: category.nameEn,
           nameUr: category.nameUr,
           type: category.type,
-          items: category.items.map((item) => ({
+          items: category.items.map((item: SourceRecord['categories'][number]['items'][number]) => ({
             description: item.description,
             amount: Number(item.amount)
           }))
