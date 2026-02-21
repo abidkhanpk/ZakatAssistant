@@ -19,7 +19,7 @@ type Category = {
 };
 
 function localizeDefaultDescription(description: string, isUr: boolean) {
-  if (description === 'Amount') return isUr ? 'رقم' : 'Amount';
+  if (description === 'Amount') return isUr ? 'تفصیل' : 'Description';
   if (description === 'Other') return isUr ? 'دیگر' : 'Other';
   return description;
 }
@@ -66,22 +66,28 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
   }, [categories, calendarType]);
 
   function addCategory(type: 'ASSET' | 'LIABILITY') {
-    setCategories((prev) => [
-      ...prev,
-      {
-        id: `cat-${Date.now()}`,
-        nameEn: type === 'ASSET' ? 'Custom asset category' : 'Custom liability category',
-        nameUr: type === 'ASSET' ? 'کسٹم اثاثہ زمرہ' : 'کسٹم واجبات زمرہ',
-        type,
-        items: [{ description: isUr ? 'رقم' : 'Amount', amount: 0 }],
-        collapsed: false
+    setCategories((prev) => {
+      const next = [
+        ...prev,
+        {
+          id: `cat-${Date.now()}`,
+          nameEn: type === 'ASSET' ? 'Custom asset category' : 'Custom liability category',
+          nameUr: type === 'ASSET' ? 'کسٹم اثاثہ زمرہ' : 'کسٹم واجبات زمرہ',
+          type,
+          items: [{ description: isUr ? 'تفصیل' : 'Description', amount: 0 }],
+          collapsed: false
+        }
+      ];
+      if (mode === 'WIZARD') {
+        setWizardStep(next.length - 1);
       }
-    ]);
+      return next;
+    });
   }
 
   function addItem(categoryIndex: number) {
     setCategories((prev) =>
-      prev.map((category, i) => (i === categoryIndex ? { ...category, items: [...category.items, { description: isUr ? 'رقم' : 'Amount', amount: 0 }] } : category))
+      prev.map((category, i) => (i === categoryIndex ? { ...category, items: [...category.items, { description: isUr ? 'تفصیل' : 'Description', amount: 0 }] } : category))
     );
   }
 
@@ -105,7 +111,7 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
       prev.map((category, i) => {
         if (i !== categoryIndex) return category;
         const remaining = category.items.filter((_, ii) => ii !== itemIndex);
-        return { ...category, items: remaining.length ? remaining : [{ description: isUr ? 'رقم' : 'Amount', amount: 0 }] };
+        return { ...category, items: remaining.length ? remaining : [{ description: isUr ? 'تفصیل' : 'Description', amount: 0 }] };
       })
     );
   }
@@ -158,10 +164,12 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
         </div>
 
         {mode === 'WIZARD' ? (
-          <div className="card flex items-center justify-between">
-            <button type="button" className="rounded border px-3 py-1" onClick={() => setWizardStep((s) => Math.max(0, s - 1))}>{isUr ? 'پچھلا' : 'Previous'}</button>
-            <span>{isUr ? 'مرحلہ' : 'Step'} {wizardStep + 1} / {Math.max(categorySteps.length, 1)}</span>
-            <button type="button" className="rounded border px-3 py-1" onClick={() => setWizardStep((s) => Math.min(categorySteps.length - 1, s + 1))}>{isUr ? 'اگلا' : 'Next'}</button>
+          <div className="rounded-xl border border-brand/30 bg-brand/10 px-4 py-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <button type="button" className="rounded border border-brand/40 bg-white px-3 py-1 font-medium text-brand hover:bg-brand/5" onClick={() => setWizardStep((s) => Math.max(0, s - 1))}>{isUr ? 'پچھلا' : 'Previous'}</button>
+              <span className="font-semibold text-brand">{isUr ? 'مرحلہ' : 'Step'} {wizardStep + 1} / {Math.max(categorySteps.length, 1)}</span>
+              <button type="button" className="rounded border border-brand/40 bg-white px-3 py-1 font-medium text-brand hover:bg-brand/5" onClick={() => setWizardStep((s) => Math.min(categorySteps.length - 1, s + 1))}>{isUr ? 'اگلا' : 'Next'}</button>
+            </div>
           </div>
         ) : null}
 
