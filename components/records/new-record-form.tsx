@@ -79,10 +79,6 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
     ]);
   }
 
-  function updateCategory(index: number, next: Partial<Category>) {
-    setCategories((prev) => prev.map((category, i) => (i === index ? { ...category, ...next } : category)));
-  }
-
   function addItem(categoryIndex: number) {
     setCategories((prev) =>
       prev.map((category, i) => (i === categoryIndex ? { ...category, items: [...category.items, { description: isUr ? 'رقم' : 'Amount', amount: 0 }] } : category))
@@ -192,22 +188,7 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
                     <tr key={`${category.id}-item-${itemIndex}`} className="border-b align-top">
                       <td className="p-2">{typeLabel(category.type)}</td>
                       <td className="p-2">
-                        {isUr ? (
-                          <input
-                            className="w-full rounded border p-2"
-                            value={category.nameUr}
-                            onChange={(e) => updateCategory(categoryIndex, { nameUr: e.target.value || 'زمرہ' })}
-                            placeholder="زمرہ"
-                            dir="rtl"
-                          />
-                        ) : (
-                          <input
-                            className="w-full rounded border p-2"
-                            value={category.nameEn}
-                            onChange={(e) => updateCategory(categoryIndex, { nameEn: e.target.value || 'Category' })}
-                            placeholder="Category"
-                          />
-                        )}
+                        {isUr ? category.nameUr : category.nameEn}
                       </td>
                       <td className="p-2">
                         <input
@@ -266,26 +247,6 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
                   <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => removeCategory(categoryIndex)}>{isUr ? 'حذف' : 'Remove'}</button>
                 </div>
               </div>
-
-              <div>
-                {isUr ? (
-                  <input
-                    className="w-full rounded border p-2"
-                    value={category.nameUr}
-                    onChange={(e) => updateCategory(categoryIndex, { nameUr: e.target.value || 'زمرہ' })}
-                    placeholder="زمرہ"
-                    dir="rtl"
-                  />
-                ) : (
-                  <input
-                    className="w-full rounded border p-2"
-                    value={category.nameEn}
-                    onChange={(e) => updateCategory(categoryIndex, { nameEn: e.target.value || 'Category' })}
-                    placeholder="Category"
-                  />
-                )}
-              </div>
-
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
