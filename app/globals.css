@@ -35,7 +35,7 @@ body { @apply bg-slate-50 text-slate-900; }
   padding: 0 1rem 0 1.75rem;
   border: 1px solid #d8e0ea;
   border-left: 0;
-  background: linear-gradient(#ffffff, #f7fafc);
+  background: #f7fafc;
   color: #475569;
   text-decoration: none;
   line-height: 1;
@@ -63,7 +63,7 @@ body { @apply bg-slate-50 text-slate-900; }
 }
 
 .breadcrumbs li a::after {
-  left: calc(100% - 1px);
+  left: calc(100% - 2px);
   border-left: 13px solid #f7fafc;
   z-index: 2;
 }
@@ -81,7 +81,7 @@ body { @apply bg-slate-50 text-slate-900; }
 
 .breadcrumbs li.active a {
   border-color: rgb(11 143 95 / 0.45);
-  background: linear-gradient(#e8f6ef, #dff2e8);
+  background: #e3f4eb;
   color: #066a45;
   font-weight: 600;
   border-radius: 0 0.55rem 0.55rem 0;
@@ -104,7 +104,7 @@ body { @apply bg-slate-50 text-slate-900; }
   width: var(--crumb-full, 170px);
   border-color: rgb(11 143 95 / 0.3);
   color: #0b8f5f;
-  background: linear-gradient(#ffffff, #f5fbf8);
+  background: #f5fbf8;
 }
 
 .breadcrumbs li:not(.first):not(.active):hover a::before,
@@ -123,7 +123,7 @@ body { @apply bg-slate-50 text-slate-900; }
 .breadcrumbs li.active:focus-within a {
   border-color: rgb(11 143 95 / 0.35);
   color: #0b8f5f;
-  background: linear-gradient(#ffffff, #f5fbf8);
+  background: #f5fbf8;
 }
 
 .crumb-home-icon {
@@ -139,5 +139,5 @@ body { @apply bg-slate-50 text-slate-900; }
 .breadcrumbs li.first a:focus-visible {
   border-color: rgb(11 143 95 / 0.35);
   color: #0b8f5f;
-  background: linear-gradient(#ffffff, #f5fbf8);
+  background: #f5fbf8;
 }
