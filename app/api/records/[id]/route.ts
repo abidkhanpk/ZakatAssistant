@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -52,7 +53,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const liabilities = payload.categories.filter((c) => c.type === 'LIABILITY');
   const totals = calculateZakat({ calendarType: payload.calendarType, assets, liabilities });
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.zakatRecord.update({
       where: { id: existing.id },
       data: {
