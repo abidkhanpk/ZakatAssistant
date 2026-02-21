@@ -18,13 +18,19 @@ type Category = {
   collapsed: boolean;
 };
 
-function toCategory(template: CategoryTemplate, idx: number): Category {
+function localizeDefaultDescription(description: string, isUr: boolean) {
+  if (description === 'Amount') return isUr ? 'رقم' : 'Amount';
+  if (description === 'Other') return isUr ? 'دیگر' : 'Other';
+  return description;
+}
+
+function toCategory(template: CategoryTemplate, idx: number, isUr: boolean): Category {
   return {
     id: `cat-${idx}-${template.type}`,
     nameEn: template.nameEn,
     nameUr: template.nameUr,
     type: template.type,
-    items: template.items.map((item) => ({ ...item })),
+    items: template.items.map((item) => ({ ...item, description: localizeDefaultDescription(item.description, isUr) })),
     collapsed: false
   };
 }
@@ -37,13 +43,12 @@ function move<T>(arr: T[], from: number, to: number) {
 }
 
 export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken: string }) {
+  const isUr = locale === 'ur';
   const [mode, setMode] = useState<'WIZARD' | 'ADVANCED'>('WIZARD');
   const [wizardStep, setWizardStep] = useState(0);
   const [yearLabel, setYearLabel] = useState(String(new Date().getFullYear()));
   const [calendarType, setCalendarType] = useState<'ISLAMIC' | 'GREGORIAN'>('ISLAMIC');
-  const [categories, setCategories] = useState<Category[]>(() => defaultCategoryTemplates.map(toCategory));
-
-  const isUr = locale === 'ur';
+  const [categories, setCategories] = useState<Category[]>(() => defaultCategoryTemplates.map((template, idx) => toCategory(template, idx, isUr)));
 
   const categorySteps = useMemo(() => categories.map((category) => category.id), [categories]);
   const visibleCategories = useMemo(() => {
@@ -117,6 +122,11 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
     });
   }
 
+  function typeLabel(type: 'ASSET' | 'LIABILITY') {
+    if (type === 'ASSET') return isUr ? 'اثاثہ' : 'Asset';
+    return isUr ? 'واجبات' : 'Liability';
+  }
+
   return (
     <main className="mx-auto max-w-5xl space-y-4 p-4">
       <motion.form initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} method="post" action="/api/records" className="space-y-4">
@@ -159,12 +169,97 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
           </div>
         ) : null}
 
-        {visibleCategories.map((category) => {
+        {mode === 'ADVANCED' ? (
+          <div className="card overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b text-left">
+                  <th className="p-2">{isUr ? 'قسم' : 'Type'}</th>
+                  <th className="p-2">{isUr ? 'زمرہ' : 'Category'}</th>
+                  <th className="p-2">{isUr ? 'تفصیل' : 'Description'}</th>
+                  <th className="p-2">{isUr ? 'رقم' : 'Amount'}</th>
+                  <th className="p-2">{isUr ? 'عمل' : 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categories.length === 0 ? (
+                  <tr>
+                    <td className="p-2 text-slate-500" colSpan={5}>{isUr ? 'کوئی زمرہ موجود نہیں' : 'No categories yet'}</td>
+                  </tr>
+                ) : null}
+                {categories.map((category, categoryIndex) =>
+                  category.items.map((item, itemIndex) => (
+                    <tr key={`${category.id}-item-${itemIndex}`} className="border-b align-top">
+                      <td className="p-2">{typeLabel(category.type)}</td>
+                      <td className="p-2">
+                        {isUr ? (
+                          <input
+                            className="w-full rounded border p-2"
+                            value={category.nameUr}
+                            onChange={(e) => updateCategory(categoryIndex, { nameUr: e.target.value || 'زمرہ' })}
+                            placeholder="زمرہ"
+                            dir="rtl"
+                          />
+                        ) : (
+                          <input
+                            className="w-full rounded border p-2"
+                            value={category.nameEn}
+                            onChange={(e) => updateCategory(categoryIndex, { nameEn: e.target.value || 'Category' })}
+                            placeholder="Category"
+                          />
+                        )}
+                      </td>
+                      <td className="p-2">
+                        <input
+                          className="w-full rounded border p-2"
+                          value={item.description}
+                          onChange={(e) => updateItem(categoryIndex, itemIndex, { description: e.target.value })}
+                          placeholder={isUr ? 'تفصیل' : 'Description'}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full rounded border p-2"
+                          value={item.amount}
+                          onChange={(e) => updateItem(categoryIndex, itemIndex, { amount: Number(e.target.value || 0) })}
+                          placeholder={isUr ? 'رقم' : 'Amount'}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" className="rounded border px-2 py-1" onClick={() => removeItem(categoryIndex, itemIndex)}>
+                            {isUr ? 'آئٹم حذف' : 'Remove item'}
+                          </button>
+                          {itemIndex === 0 ? (
+                            <>
+                              <button type="button" className="rounded border px-2 py-1" onClick={() => addItem(categoryIndex)}>
+                                {isUr ? 'آئٹم شامل کریں' : 'Add item'}
+                              </button>
+                              <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => moveCategory(categoryIndex, 'UP')}>↑</button>
+                              <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => moveCategory(categoryIndex, 'DOWN')}>↓</button>
+                              <button type="button" className="rounded border px-2 py-1" onClick={() => removeCategory(categoryIndex)}>
+                                {isUr ? 'زمرہ حذف' : 'Remove category'}
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
+        {mode === 'WIZARD' ? visibleCategories.map((category) => {
           const categoryIndex = categories.findIndex((c) => c.id === category.id);
           return (
             <div key={category.id} className="card space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="font-semibold">{isUr ? category.nameUr : category.nameEn} ({category.type})</div>
+                <div className="font-semibold">{isUr ? category.nameUr : category.nameEn} ({typeLabel(category.type)})</div>
                 <div className="flex gap-2">
                   <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => moveCategory(categoryIndex, 'UP')}>↑</button>
                   <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => moveCategory(categoryIndex, 'DOWN')}>↓</button>
@@ -172,9 +267,23 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
                 </div>
               </div>
 
-              <div className="grid gap-2 md:grid-cols-2">
-                <input className="w-full rounded border p-2" value={category.nameEn} onChange={(e) => updateCategory(categoryIndex, { nameEn: e.target.value || 'Category' })} placeholder={isUr ? 'زمرہ نام (انگریزی)' : 'Category name (EN)'} />
-                <input className="w-full rounded border p-2" value={category.nameUr} onChange={(e) => updateCategory(categoryIndex, { nameUr: e.target.value || 'زمرہ' })} placeholder={isUr ? 'زمرہ نام (اردو)' : 'Category name (UR)'} dir={isUr ? 'rtl' : 'ltr'} />
+              <div>
+                {isUr ? (
+                  <input
+                    className="w-full rounded border p-2"
+                    value={category.nameUr}
+                    onChange={(e) => updateCategory(categoryIndex, { nameUr: e.target.value || 'زمرہ' })}
+                    placeholder="زمرہ"
+                    dir="rtl"
+                  />
+                ) : (
+                  <input
+                    className="w-full rounded border p-2"
+                    value={category.nameEn}
+                    onChange={(e) => updateCategory(categoryIndex, { nameEn: e.target.value || 'Category' })}
+                    placeholder="Category"
+                  />
+                )}
               </div>
 
               <div className="overflow-x-auto">
@@ -201,7 +310,7 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
               <button type="button" className="rounded border px-3 py-2" onClick={() => addItem(categoryIndex)}>{isUr ? 'آئٹم شامل کریں' : 'Add item'}</button>
             </div>
           );
-        })}
+        }) : null}
 
         <div className="sticky bottom-0 flex flex-wrap gap-2 bg-slate-50/95 py-3 backdrop-blur">
           <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('ASSET')}>{isUr ? 'اثاثہ زمرہ شامل کریں' : 'Add asset category'}</button>
