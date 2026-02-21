@@ -1,6 +1,6 @@
 {
   "name": "zakatassistant",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,9 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
-    "seed": "tsx prisma/seed.ts"
-  },
-  "prisma": {
+    "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
@@ -39,10 +37,11 @@
     "@types/react": "18.3.5",
     "@types/react-dom": "18.3.0",
     "autoprefixer": "10.4.20",
+    "dotenv": "^17.3.1",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.7",
     "postcss": "8.4.44",
-    "prisma": "^5.20.0",
+    "prisma": "^7.4.1",
     "tailwindcss": "3.4.10",
     "tsx": "^4.19.1",
     "typescript": "5.6.2"
