@@ -40,8 +40,16 @@ export async function POST(req: Request) {
   const locale = String(formData.locale || 'en');
 
   if (url.searchParams.get('test')) {
-    await sendEmail(String(formData.to || ''), 'ZakatAssistant SMTP test', 'SMTP works');
-    return NextResponse.redirect(new URL(`/${locale}/admin/settings`, req.url), 303);
+    try {
+      await sendEmail(String(formData.to || ''), 'ZakatAssistant SMTP test', 'SMTP works');
+      return NextResponse.redirect(new URL(`/${locale}/admin/settings?smtpTest=ok`, req.url), 303);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'SMTP test failed';
+      const errorCode = /socket close|ECONNRESET|ETIMEDOUT|ESOCKET/i.test(message)
+        ? 'smtp-connection-failed'
+        : 'smtp-test-failed';
+      return NextResponse.redirect(new URL(`/${locale}/admin/settings?smtpError=${errorCode}`, req.url), 303);
+    }
   }
 
   const data = schema.parse(formData);

@@ -16,7 +16,7 @@ async function main() {
     where: { username: 'admin' },
     create: {
       username: 'admin',
-      email: 'admin@zakatassistant.local',
+      email: 'abid@gmx.com',
       name: 'Default Admin',
       passwordHash,
       role: Role.ADMIN,

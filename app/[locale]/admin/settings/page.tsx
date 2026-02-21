@@ -8,7 +8,7 @@ export default async function AdminSettings({
   searchParams
 }: {
   params: { locale: string };
-  searchParams: { smtpError?: string };
+  searchParams: { smtpError?: string; smtpTest?: string };
 }) {
   const admin = await getCurrentUser();
   if (!admin) redirect(`/${params.locale}/login`);
@@ -22,6 +22,17 @@ export default async function AdminSettings({
         <h2 className="text-lg font-semibold">SMTP</h2>
         {searchParams.smtpError === 'password-required' ? (
           <p className="text-sm text-red-600">Password is required for initial SMTP setup.</p>
+        ) : null}
+        {searchParams.smtpError === 'smtp-connection-failed' ? (
+          <p className="text-sm text-red-600">
+            SMTP connection failed. Check host/port/secure settings. Common mapping: port 465 with `Secure` on, or port 587 with `Secure` off.
+          </p>
+        ) : null}
+        {searchParams.smtpError === 'smtp-test-failed' ? (
+          <p className="text-sm text-red-600">SMTP test failed. Please verify credentials and server policy.</p>
+        ) : null}
+        {searchParams.smtpTest === 'ok' ? (
+          <p className="text-sm text-green-700">SMTP test email sent successfully.</p>
         ) : null}
         <form className="card grid gap-2 md:grid-cols-2" method="post" action="/api/admin/settings/smtp">
           <CsrfInput />

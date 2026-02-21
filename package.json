@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
-    "@prisma/client": "^5.20.0",
+    "@prisma/client": "^7.4.1",
     "argon2": "^0.41.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
