@@ -10,16 +10,17 @@ export default async function RecordsPage({ params }: { params: { locale: string
   const isUr = params.locale === 'ur';
 
   const records = await prisma.zakatRecord.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+  type RecordRow = (typeof records)[number];
   const currentYear = new Date().getFullYear();
-  const exactPreviousYearRecord = records.find((record) => Number(record.yearLabel) === currentYear - 1);
+  const exactPreviousYearRecord = records.find((record: RecordRow) => Number(record.yearLabel) === currentYear - 1);
   const previousYearRecord =
     exactPreviousYearRecord ||
     [...records]
-      .filter((record) => {
+      .filter((record: RecordRow) => {
         const n = Number(record.yearLabel);
         return Number.isFinite(n) && n < currentYear;
       })
-      .sort((a, b) => Number(b.yearLabel) - Number(a.yearLabel))[0] || records[0] || null;
+      .sort((a: RecordRow, b: RecordRow) => Number(b.yearLabel) - Number(a.yearLabel))[0] || records[0] || null;
 
   const formatter = new Intl.NumberFormat(params.locale === 'ur' ? 'ur-PK' : 'en-US', {
     minimumFractionDigits: 2,
@@ -46,7 +47,7 @@ export default async function RecordsPage({ params }: { params: { locale: string
             </tr>
           </thead>
           <tbody>
-            {records.map((record: { id: string; yearLabel: string; totalAssets: unknown; totalDeductions: unknown; netZakatable: unknown; zakatPayable: unknown }) => (
+            {records.map((record: RecordRow) => (
               <tr key={record.id} className="border-b hover:bg-slate-50">
                 <td className="p-2">
                   <Link className="text-brand underline" href={`/${params.locale}/app/records/${record.id}?year=${encodeURIComponent(record.yearLabel)}`}>
