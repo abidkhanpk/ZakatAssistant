@@ -87,5 +87,8 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL(`/${payload.locale}/app/records/${record.id}`, req.url), 303);
+  return NextResponse.redirect(
+    new URL(`/${payload.locale}/app/records/${record.id}?year=${encodeURIComponent(payload.yearLabel)}`, req.url),
+    303
+  );
 }

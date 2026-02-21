@@ -3,7 +3,13 @@ import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
-export default async function RecordDetails({ params }: { params: { id: string; locale: string } }) {
+export default async function RecordDetails({
+  params,
+  searchParams
+}: {
+  params: { id: string; locale: string };
+  searchParams: { year?: string };
+}) {
   const user = await getCurrentUser();
   if (!user) redirect(`/${params.locale}/login`);
 
@@ -13,6 +19,9 @@ export default async function RecordDetails({ params }: { params: { id: string; 
   });
 
   if (!record) return <main className="p-4">{params.locale === 'ur' ? 'نہیں ملا' : 'Not found'}</main>;
+  if (searchParams.year !== record.yearLabel) {
+    redirect(`/${params.locale}/app/records/${record.id}?year=${encodeURIComponent(record.yearLabel)}`);
+  }
 
   const isUr = params.locale === 'ur';
 
@@ -20,8 +29,28 @@ export default async function RecordDetails({ params }: { params: { id: string; 
     <main className="mx-auto max-w-4xl space-y-3 p-4">
       <div className="card">
         <h1 className="text-2xl font-bold">{record.yearLabel}</h1>
-        <p className="mt-1 text-sm text-slate-600">{isUr ? 'زکوٰۃ قابلِ ادا:' : 'Zakat payable:'} {Number(record.zakatPayable).toFixed(2)} {record.currency}</p>
-        <Link className="mt-3 inline-block rounded bg-brand px-3 py-2 text-white" href={`/${params.locale}/app/records/new?editRecordId=${record.id}`}>
+        <div className="mt-3 grid gap-2 text-sm md:grid-cols-4">
+          <div>
+            <p className="text-slate-500">{isUr ? 'کل اثاثے' : 'Total Assets'}</p>
+            <p className="font-semibold">{Number(record.totalAssets).toFixed(2)} {record.currency}</p>
+          </div>
+          <div>
+            <p className="text-slate-500">{isUr ? 'کل واجبات' : 'Total Liabilities'}</p>
+            <p className="font-semibold">{Number(record.totalDeductions).toFixed(2)} {record.currency}</p>
+          </div>
+          <div>
+            <p className="text-slate-500">{isUr ? 'خالص اثاثے' : 'Net Assets'}</p>
+            <p className="font-semibold">{Number(record.netZakatable).toFixed(2)} {record.currency}</p>
+          </div>
+          <div>
+            <p className="text-slate-500">{isUr ? 'زکوٰۃ قابلِ ادا' : 'Zakat Payable'}</p>
+            <p className="font-semibold">{Number(record.zakatPayable).toFixed(2)} {record.currency}</p>
+          </div>
+        </div>
+        <Link
+          className="mt-4 inline-block rounded bg-brand px-3 py-2 text-white"
+          href={`/${params.locale}/app/records/new?editRecordId=${record.id}&editYear=${encodeURIComponent(record.yearLabel)}`}
+        >
           {isUr ? 'ریکارڈ میں ترمیم کریں' : 'Edit record'}
         </Link>
       </div>

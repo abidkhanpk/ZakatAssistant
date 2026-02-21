@@ -49,7 +49,7 @@ export default async function RecordsPage({ params }: { params: { locale: string
             {records.map((record: { id: string; yearLabel: string; totalAssets: unknown; totalDeductions: unknown; netZakatable: unknown; zakatPayable: unknown }) => (
               <tr key={record.id} className="border-b hover:bg-slate-50">
                 <td className="p-2">
-                  <Link className="text-brand underline" href={`/${params.locale}/app/records/${record.id}`}>
+                  <Link className="text-brand underline" href={`/${params.locale}/app/records/${record.id}?year=${encodeURIComponent(record.yearLabel)}`}>
                     {record.yearLabel}
                   </Link>
                 </td>

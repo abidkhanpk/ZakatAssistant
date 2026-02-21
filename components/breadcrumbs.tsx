@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Home as HomeIcon } from 'lucide-react';
 
 const labels: Record<string, { en: string; ur: string }> = {
@@ -23,13 +23,24 @@ function pretty(segment: string, locale: 'en' | 'ur') {
 
 export function Breadcrumbs({ locale }: { locale: 'en' | 'ur' }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const segments = pathname.split('/').filter(Boolean);
   const withoutLocale = segments[0] === 'en' || segments[0] === 'ur' ? segments.slice(1) : segments;
+  const isAppHome = withoutLocale.length === 1 && withoutLocale[0] === 'app';
+  if (isAppHome) return null;
+
+  const editYear = searchParams.get('editYear');
+  const recordYear = searchParams.get('year');
 
   const crumbs = withoutLocale
     .map((seg, idx) => ({
       segment: seg,
-      label: pretty(seg, locale),
+      label:
+        seg.toLowerCase() === 'new' && editYear
+          ? editYear
+          : withoutLocale[idx - 1]?.toLowerCase() === 'records' && recordYear
+            ? recordYear
+            : pretty(seg, locale),
       href: `/${locale}/${withoutLocale.slice(0, idx + 1).join('/')}`
     }))
     .filter((crumb) => crumb.segment.toLowerCase() !== 'app');
