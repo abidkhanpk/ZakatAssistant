@@ -30,17 +30,19 @@ export default async function AppHome({ params }: { params: { locale: string } }
 
   return (
     <main className="space-y-4 p-4">
-      <div className="flex flex-wrap gap-2">
-        <Link className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand/40 hover:text-brand" href={`/${params.locale}/app/records/new`}>
-          <PlusCircle size={16} />
-          {isUr ? 'نیا ریکارڈ' : 'New Record'}
-        </Link>
-        <Link className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand/40 hover:text-brand" href={`/${params.locale}/app/records`}>
-          <BookOpenText size={16} />
-          {isUr ? 'سالانہ ریکارڈز' : 'Yearly Records'}
-        </Link>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h1 className="text-2xl font-bold">{isUr ? `خوش آمدید، ${user.name}` : `Welcome, ${user.name}`}</h1>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Link className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand/40 hover:text-brand" href={`/${params.locale}/app/records/new`}>
+            <PlusCircle size={16} />
+            {isUr ? 'نیا ریکارڈ' : 'New Record'}
+          </Link>
+          <Link className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand/40 hover:text-brand" href={`/${params.locale}/app/records`}>
+            <BookOpenText size={16} />
+            {isUr ? 'سابقہ ریکارڈز' : 'Previous Records'}
+          </Link>
+        </div>
       </div>
-      <h1 className="text-2xl font-bold">{isUr ? `خوش آمدید، ${user.name}` : `Welcome, ${user.name}`}</h1>
       <YearlyMetricsDashboard locale={params.locale} points={chartPoints} />
     </main>
   );
