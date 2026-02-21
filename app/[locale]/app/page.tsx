@@ -20,7 +20,7 @@ export default async function AppHome({ params }: { params: { locale: string } }
       zakatPayable: true
     }
   });
-  const chartPoints = records.map((record) => ({
+  const chartPoints = records.map((record: (typeof records)[number]) => ({
     yearLabel: record.yearLabel,
     totalAssets: Number(record.totalAssets),
     totalDeductions: Number(record.totalDeductions),
