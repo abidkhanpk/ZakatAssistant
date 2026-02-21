@@ -18,6 +18,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
         select: { id: true, titleEn: true, titleUr: true, readAt: true }
       })
     : [];
+  type NotificationRow = (typeof notifications)[number];
 
   return (
     <div
@@ -40,8 +41,8 @@ export default async function LocaleLayout({ children, params }: { children: Rea
                 }
               : null
           }
-          notifications={notifications.map((n) => ({ id: n.id, titleEn: n.titleEn, titleUr: n.titleUr }))}
-          unreadCount={notifications.filter((n) => !n.readAt).length}
+          notifications={notifications.map((n: NotificationRow) => ({ id: n.id, titleEn: n.titleEn, titleUr: n.titleUr }))}
+          unreadCount={notifications.filter((n: NotificationRow) => !n.readAt).length}
         />
         <div className="mx-auto max-w-6xl px-4 pt-14">
           <Breadcrumbs locale={isUr ? 'ur' : 'en'} />
