@@ -38,32 +38,26 @@ function move<T>(arr: T[], from: number, to: number) {
 
 export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken: string }) {
   const [mode, setMode] = useState<'WIZARD' | 'ADVANCED'>('WIZARD');
+  const [wizardStep, setWizardStep] = useState(0);
   const [yearLabel, setYearLabel] = useState(String(new Date().getFullYear()));
   const [calendarType, setCalendarType] = useState<'ISLAMIC' | 'GREGORIAN'>('ISLAMIC');
   const [categories, setCategories] = useState<Category[]>(() => defaultCategoryTemplates.map(toCategory));
 
   const isUr = locale === 'ur';
 
-  const visibleCategories = useMemo(() => categories, [categories]);
+  const categorySteps = useMemo(() => categories.map((category) => category.id), [categories]);
+  const visibleCategories = useMemo(() => {
+    if (mode === 'ADVANCED') return categories;
+    const currentId = categorySteps[wizardStep];
+    return categories.filter((category) => category.id === currentId);
+  }, [categories, mode, categorySteps, wizardStep]);
 
   const totals = useMemo(() => {
-    const totalAssets = categories
-      .filter((c) => c.type === 'ASSET')
-      .flatMap((c) => c.items)
-      .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-    const totalDeductions = categories
-      .filter((c) => c.type === 'LIABILITY')
-      .flatMap((c) => c.items)
-      .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalAssets = categories.filter((c) => c.type === 'ASSET').flatMap((c) => c.items).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalDeductions = categories.filter((c) => c.type === 'LIABILITY').flatMap((c) => c.items).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
     const net = totalAssets - totalDeductions;
     const rate = calendarType === 'ISLAMIC' ? 0.025 : 0.0258;
-    return {
-      totalAssets,
-      totalDeductions,
-      net,
-      rate,
-      zakatPayable: Math.max(0, net) * rate
-    };
+    return { totalAssets, totalDeductions, net, rate, zakatPayable: Math.max(0, net) * rate };
   }, [categories, calendarType]);
 
   function addCategory(type: 'ASSET' | 'LIABILITY') {
@@ -74,7 +68,7 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
         nameEn: type === 'ASSET' ? 'Custom asset category' : 'Custom liability category',
         nameUr: type === 'ASSET' ? 'کسٹم اثاثہ زمرہ' : 'کسٹم واجبات زمرہ',
         type,
-        items: [{ description: 'Amount', amount: 0 }],
+        items: [{ description: isUr ? 'رقم' : 'Amount', amount: 0 }],
         collapsed: false
       }
     ]);
@@ -86,11 +80,7 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
 
   function addItem(categoryIndex: number) {
     setCategories((prev) =>
-      prev.map((category, i) =>
-        i === categoryIndex
-          ? { ...category, items: [...category.items, { description: 'Amount', amount: 0 }] }
-          : category
-      )
+      prev.map((category, i) => (i === categoryIndex ? { ...category, items: [...category.items, { description: isUr ? 'رقم' : 'Amount', amount: 0 }] } : category))
     );
   }
 
@@ -98,10 +88,7 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
     setCategories((prev) =>
       prev.map((category, i) =>
         i === categoryIndex
-          ? {
-              ...category,
-              items: category.items.map((item, ii) => (ii === itemIndex ? { ...item, ...next } : item))
-            }
+          ? { ...category, items: category.items.map((item, ii) => (ii === itemIndex ? { ...item, ...next } : item)) }
           : category
       )
     );
@@ -109,6 +96,7 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
 
   function removeCategory(categoryIndex: number) {
     setCategories((prev) => prev.filter((_, i) => i !== categoryIndex));
+    setWizardStep(0);
   }
 
   function removeItem(categoryIndex: number, itemIndex: number) {
@@ -116,7 +104,7 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
       prev.map((category, i) => {
         if (i !== categoryIndex) return category;
         const remaining = category.items.filter((_, ii) => ii !== itemIndex);
-        return { ...category, items: remaining.length ? remaining : [{ description: 'Amount', amount: 0 }] };
+        return { ...category, items: remaining.length ? remaining : [{ description: isUr ? 'رقم' : 'Amount', amount: 0 }] };
       })
     );
   }
@@ -129,154 +117,96 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
     });
   }
 
-  function moveItem(categoryIndex: number, itemIndex: number, direction: 'UP' | 'DOWN') {
-    setCategories((prev) =>
-      prev.map((category, i) => {
-        if (i !== categoryIndex) return category;
-        const to = direction === 'UP' ? itemIndex - 1 : itemIndex + 1;
-        if (to < 0 || to >= category.items.length) return category;
-        return { ...category, items: move(category.items, itemIndex, to) };
-      })
-    );
-  }
-
   return (
-    <main className="mx-auto max-w-5xl p-4 space-y-4">
+    <main className="mx-auto max-w-5xl space-y-4 p-4">
       <motion.form initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} method="post" action="/api/records" className="space-y-4">
         <input type="hidden" name="csrfToken" value={csrfToken} />
         <input type="hidden" name="locale" value={locale} />
         <input
           type="hidden"
           name="payload"
-          value={JSON.stringify({
-            locale,
-            yearLabel,
-            calendarType,
-            categories: categories.map((category) => ({
-              nameEn: category.nameEn,
-              nameUr: category.nameUr,
-              type: category.type,
-              items: category.items
-            }))
-          })}
+          value={JSON.stringify({ locale, yearLabel, calendarType, categories: categories.map((category) => ({ nameEn: category.nameEn, nameUr: category.nameUr, type: category.type, items: category.items })) })}
         />
 
         <div className="card grid gap-3 md:grid-cols-4">
-          <div className="md:col-span-1">
-            <label className="text-sm font-medium">Year</label>
-            <input className="mt-1 w-full rounded border p-2" value={yearLabel} onChange={(e) => setYearLabel(e.target.value)} />
-          </div>
-          <div className="md:col-span-1">
-            <label className="text-sm font-medium">Calendar</label>
+          <div><label className="text-sm font-medium">{isUr ? 'سال' : 'Year'}</label><input className="mt-1 w-full rounded border p-2" value={yearLabel} onChange={(e) => setYearLabel(e.target.value)} /></div>
+          <div>
+            <label className="text-sm font-medium">{isUr ? 'کیلنڈر' : 'Calendar'}</label>
             <select className="mt-1 w-full rounded border p-2" value={calendarType} onChange={(e) => setCalendarType(e.target.value as 'ISLAMIC' | 'GREGORIAN')}>
-              <option value="ISLAMIC">Islamic (2.5%)</option>
-              <option value="GREGORIAN">Gregorian (2.58%)</option>
+              <option value="ISLAMIC">{isUr ? 'اسلامی' : 'Islamic'}</option>
+              <option value="GREGORIAN">{isUr ? 'گریگورین' : 'Gregorian'}</option>
             </select>
           </div>
-          <div className="md:col-span-2 flex items-end gap-2">
-            <button
-              type="button"
-              className={`rounded border px-3 py-2 ${mode === 'WIZARD' ? 'bg-slate-900 text-white' : ''}`}
-              onClick={() => setMode('WIZARD')}
-            >
-              Wizard
-            </button>
-            <button
-              type="button"
-              className={`rounded border px-3 py-2 ${mode === 'ADVANCED' ? 'bg-slate-900 text-white' : ''}`}
-              onClick={() => setMode('ADVANCED')}
-            >
-              Advanced
-            </button>
+          <div className="md:col-span-2 flex gap-2 items-end">
+            <button type="button" className={`rounded border px-3 py-2 ${mode === 'WIZARD' ? 'bg-slate-900 text-white' : ''}`} onClick={() => setMode('WIZARD')}>{isUr ? 'وزرڈ' : 'Wizard'}</button>
+            <button type="button" className={`rounded border px-3 py-2 ${mode === 'ADVANCED' ? 'bg-slate-900 text-white' : ''}`} onClick={() => setMode('ADVANCED')}>{isUr ? 'ایڈوانسڈ' : 'Advanced'}</button>
           </div>
         </div>
 
         <div className="card grid gap-2 text-sm md:grid-cols-5">
-          <div><p className="text-slate-500">Total Assets</p><p className="font-semibold">{totals.totalAssets.toFixed(2)}</p></div>
-          <div><p className="text-slate-500">Total Deductions</p><p className="font-semibold">{totals.totalDeductions.toFixed(2)}</p></div>
-          <div><p className="text-slate-500">Net</p><p className="font-semibold">{totals.net.toFixed(2)}</p></div>
-          <div><p className="text-slate-500">Rate</p><p className="font-semibold">{(totals.rate * 100).toFixed(2)}%</p></div>
-          <div><p className="text-slate-500">Zakat Payable</p><p className="font-semibold">{totals.zakatPayable.toFixed(2)}</p></div>
+          <div><p className="text-slate-500">{isUr ? 'کل اثاثے' : 'Total Assets'}</p><p className="font-semibold">{totals.totalAssets.toFixed(2)}</p></div>
+          <div><p className="text-slate-500">{isUr ? 'کل کٹوتیاں' : 'Total Deductions'}</p><p className="font-semibold">{totals.totalDeductions.toFixed(2)}</p></div>
+          <div><p className="text-slate-500">{isUr ? 'خالص' : 'Net'}</p><p className="font-semibold">{totals.net.toFixed(2)}</p></div>
+          <div><p className="text-slate-500">{isUr ? 'شرح' : 'Rate'}</p><p className="font-semibold">{(totals.rate * 100).toFixed(2)}%</p></div>
+          <div><p className="text-slate-500">{isUr ? 'زکوٰۃ قابلِ ادا' : 'Zakat Payable'}</p><p className="font-semibold">{totals.zakatPayable.toFixed(2)}</p></div>
         </div>
+
+        {mode === 'WIZARD' ? (
+          <div className="card flex items-center justify-between">
+            <button type="button" className="rounded border px-3 py-1" onClick={() => setWizardStep((s) => Math.max(0, s - 1))}>{isUr ? 'پچھلا' : 'Previous'}</button>
+            <span>{isUr ? 'مرحلہ' : 'Step'} {wizardStep + 1} / {Math.max(categorySteps.length, 1)}</span>
+            <button type="button" className="rounded border px-3 py-1" onClick={() => setWizardStep((s) => Math.min(categorySteps.length - 1, s + 1))}>{isUr ? 'اگلا' : 'Next'}</button>
+          </div>
+        ) : null}
 
         {visibleCategories.map((category) => {
           const categoryIndex = categories.findIndex((c) => c.id === category.id);
-          const subtotal = category.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-
           return (
             <div key={category.id} className="card space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="font-semibold">{isUr ? category.nameUr : category.nameEn} ({category.type})</div>
                 <div className="flex gap-2">
-                  <span className="rounded bg-slate-100 px-2 py-1 text-xs font-medium">{category.type}</span>
-                  <span className="text-sm text-slate-500">Subtotal: {subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => updateCategory(categoryIndex, { collapsed: !category.collapsed })}>
-                    {category.collapsed ? 'Expand' : 'Collapse'}
-                  </button>
-                  <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => moveCategory(categoryIndex, 'UP')}>Up</button>
-                  <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => moveCategory(categoryIndex, 'DOWN')}>Down</button>
-                  <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => removeCategory(categoryIndex)}>Remove</button>
+                  <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => moveCategory(categoryIndex, 'UP')}>↑</button>
+                  <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => moveCategory(categoryIndex, 'DOWN')}>↓</button>
+                  <button type="button" className="rounded border px-2 py-1 text-sm" onClick={() => removeCategory(categoryIndex)}>{isUr ? 'حذف' : 'Remove'}</button>
                 </div>
               </div>
 
-              {!category.collapsed && (
-                <>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <input
-                      className="w-full rounded border p-2"
-                      value={category.nameEn}
-                      onChange={(e) => updateCategory(categoryIndex, { nameEn: e.target.value || 'Category' })}
-                      placeholder="Category name (EN)"
-                    />
-                    <input
-                      className="w-full rounded border p-2"
-                      value={category.nameUr}
-                      onChange={(e) => updateCategory(categoryIndex, { nameUr: e.target.value || 'زمرہ' })}
-                      placeholder="Category name (UR)"
-                      dir={isUr ? 'rtl' : 'ltr'}
-                    />
-                  </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <input className="w-full rounded border p-2" value={category.nameEn} onChange={(e) => updateCategory(categoryIndex, { nameEn: e.target.value || 'Category' })} placeholder={isUr ? 'زمرہ نام (انگریزی)' : 'Category name (EN)'} />
+                <input className="w-full rounded border p-2" value={category.nameUr} onChange={(e) => updateCategory(categoryIndex, { nameUr: e.target.value || 'زمرہ' })} placeholder={isUr ? 'زمرہ نام (اردو)' : 'Category name (UR)'} dir={isUr ? 'rtl' : 'ltr'} />
+              </div>
 
-                  <div className="space-y-2">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="p-2">{isUr ? 'تفصیل' : 'Description'}</th>
+                      <th className="p-2">{isUr ? 'رقم' : 'Amount'}</th>
+                      <th className="p-2">{isUr ? 'عمل' : 'Actions'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {category.items.map((item, itemIndex) => (
-                      <div key={`${category.id}-item-${itemIndex}`} className="grid grid-cols-1 gap-2 md:grid-cols-8">
-                        <input
-                          className="rounded border p-2 md:col-span-5"
-                          value={item.description}
-                          onChange={(e) => updateItem(categoryIndex, itemIndex, { description: e.target.value })}
-                          placeholder="Description"
-                        />
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="rounded border p-2 md:col-span-2"
-                          value={item.amount}
-                          onChange={(e) => updateItem(categoryIndex, itemIndex, { amount: Number(e.target.value || 0) })}
-                          placeholder="Amount"
-                        />
-                        <div className="flex gap-1 md:col-span-1">
-                          <button type="button" className="rounded border px-2" onClick={() => moveItem(categoryIndex, itemIndex, 'UP')}>↑</button>
-                          <button type="button" className="rounded border px-2" onClick={() => moveItem(categoryIndex, itemIndex, 'DOWN')}>↓</button>
-                          <button type="button" className="rounded border px-2" onClick={() => removeItem(categoryIndex, itemIndex)}>×</button>
-                        </div>
-                      </div>
+                      <tr key={`${category.id}-item-${itemIndex}`} className="border-b">
+                        <td className="p-2"><input className="w-full rounded border p-2" value={item.description} onChange={(e) => updateItem(categoryIndex, itemIndex, { description: e.target.value })} placeholder={isUr ? 'تفصیل' : 'Description'} /></td>
+                        <td className="p-2"><input type="number" step="0.01" className="w-full rounded border p-2" value={item.amount} onChange={(e) => updateItem(categoryIndex, itemIndex, { amount: Number(e.target.value || 0) })} placeholder={isUr ? 'رقم' : 'Amount'} /></td>
+                        <td className="p-2"><button type="button" className="rounded border px-2" onClick={() => removeItem(categoryIndex, itemIndex)}>×</button></td>
+                      </tr>
                     ))}
-                  </div>
+                  </tbody>
+                </table>
+              </div>
 
-                  <button type="button" className="rounded border px-3 py-2" onClick={() => addItem(categoryIndex)}>
-                    Add item
-                  </button>
-                </>
-              )}
+              <button type="button" className="rounded border px-3 py-2" onClick={() => addItem(categoryIndex)}>{isUr ? 'آئٹم شامل کریں' : 'Add item'}</button>
             </div>
           );
         })}
 
         <div className="sticky bottom-0 flex flex-wrap gap-2 bg-slate-50/95 py-3 backdrop-blur">
-          <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('ASSET')}>Add asset category</button>
-          <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('LIABILITY')}>Add liability category</button>
-          <button className="rounded bg-brand px-4 py-2 text-white">Save record</button>
+          <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('ASSET')}>{isUr ? 'اثاثہ زمرہ شامل کریں' : 'Add asset category'}</button>
+          <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('LIABILITY')}>{isUr ? 'واجبات زمرہ شامل کریں' : 'Add liability category'}</button>
+          <button className="rounded bg-brand px-4 py-2 text-white">{isUr ? 'ریکارڈ محفوظ کریں' : 'Save record'}</button>
         </div>
       </motion.form>
     </main>

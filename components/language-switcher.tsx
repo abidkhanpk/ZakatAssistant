@@ -16,9 +16,15 @@ export function LanguageSwitcher({ locale }: { locale: 'en' | 'ur' }) {
     <Link
       href={href}
       className="rounded-full border bg-white/90 px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur"
-      aria-label={locale === 'en' ? 'Switch language to Urdu' : 'Switch language to English'}
+      aria-label={locale === 'en' ? 'اردو' : 'English'}
+      style={{
+        fontFamily:
+          locale === 'en'
+            ? '"Gulzar", "Noto Nastaliq Urdu", "Noto Naskh Arabic", Georgia, serif'
+            : 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
+      }}
     >
-      {locale === 'en' ? 'اردو' : 'EN'}
+      {locale === 'en' ? 'اردو' : 'En'}
     </Link>
   );
 }

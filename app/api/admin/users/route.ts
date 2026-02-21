@@ -15,16 +15,14 @@ const createSchema = z.object({
   locale: z.string().default('en')
 });
 
-const updateMetaSchema = z.object({
+const updateFullSchema = z.object({
   userId: z.string().min(1),
+  username: z.string().min(3),
+  name: z.string().min(1),
+  email: z.string().email(),
   role: z.enum(['USER', 'ADMIN']),
   verified: z.string().optional(),
-  locale: z.string().default('en')
-});
-
-const resetPasswordSchema = z.object({
-  userId: z.string().min(1),
-  newPassword: z.string().min(8),
+  newPassword: z.string().optional(),
   locale: z.string().default('en')
 });
 
@@ -55,23 +53,18 @@ export async function POST(req: Request) {
     return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
   }
 
-  if (action === 'update-meta') {
-    const data = updateMetaSchema.parse(form);
+  if (action === 'update-full') {
+    const data = updateFullSchema.parse(form);
     await prisma.user.update({
       where: { id: data.userId },
       data: {
+        username: data.username,
+        name: data.name,
+        email: data.email,
         role: data.role,
-        emailVerifiedAt: data.verified ? new Date() : null
+        emailVerifiedAt: data.verified ? new Date() : null,
+        ...(data.newPassword ? { passwordHash: await hashPassword(data.newPassword) } : {})
       }
-    });
-    return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
-  }
-
-  if (action === 'reset-password') {
-    const data = resetPasswordSchema.parse(form);
-    await prisma.user.update({
-      where: { id: data.userId },
-      data: { passwordHash: await hashPassword(data.newPassword) }
     });
     return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
   }

@@ -6,6 +6,11 @@ export default async function NotificationsPage({ params }: { params: { locale: 
   const user = await getCurrentUser();
   if (!user) redirect(`/${params.locale}/login`);
 
+  await prisma.notification.updateMany({
+    where: { readAt: null, OR: [{ recipientUserId: user.id }, { recipientUserId: null }] },
+    data: { readAt: new Date() }
+  });
+
   const notifications = await prisma.notification.findMany({
     where: { OR: [{ recipientUserId: null }, { recipientUserId: user.id }] },
     orderBy: { createdAt: 'desc' }
@@ -15,6 +20,7 @@ export default async function NotificationsPage({ params }: { params: { locale: 
 
   return (
     <main className="mx-auto max-w-3xl space-y-2 p-4">
+      <h1 className="text-2xl font-bold">{isUr ? 'اطلاعات' : 'Notifications'}</h1>
       {notifications.map((notification: { id: string; titleEn: string; titleUr: string; bodyEn: string; bodyUr: string }) => (
         <div key={notification.id} className="card">
           <h3 className="font-semibold">{isUr ? notification.titleUr : notification.titleEn}</h3>
