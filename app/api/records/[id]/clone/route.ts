@@ -24,11 +24,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const assets = existing.categories
-    .filter((c) => c.type === 'ASSET')
-    .map((c) => ({ items: c.items.map((i) => ({ amount: Number(i.amount) })) }));
+    .filter((c: { type: string }) => c.type === 'ASSET')
+    .map((c: { items: { amount: unknown }[] }) => ({ items: c.items.map((i: { amount: unknown }) => ({ amount: Number(i.amount) })) }));
   const liabilities = existing.categories
-    .filter((c) => c.type === 'LIABILITY')
-    .map((c) => ({ items: c.items.map((i) => ({ amount: Number(i.amount) })) }));
+    .filter((c: { type: string }) => c.type === 'LIABILITY')
+    .map((c: { items: { amount: unknown }[] }) => ({ items: c.items.map((i: { amount: unknown }) => ({ amount: Number(i.amount) })) }));
 
   const totals = calculateZakat({ calendarType: existing.calendarType, assets, liabilities });
 

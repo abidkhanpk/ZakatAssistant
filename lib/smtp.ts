@@ -3,6 +3,7 @@ import { prisma } from './prisma';
 import { decrypt } from './crypto';
 
 export async function getSmtpSettings() {
+  type SmtpRow = { key: string; value: unknown; encrypted: boolean };
   const keys = [
     'smtp.host',
     'smtp.port',
@@ -13,7 +14,7 @@ export async function getSmtpSettings() {
     'smtp.fromEmail'
   ] as const;
   const rows = await prisma.appSetting.findMany({ where: { key: { in: [...keys] } } });
-  const map = new Map(rows.map((row) => [row.key, row]));
+  const map = new Map<string, SmtpRow>(rows.map((row: SmtpRow) => [row.key, row]));
 
   // Backward compatibility for existing JSON-based smtp setting
   if (!map.get('smtp.host')) {

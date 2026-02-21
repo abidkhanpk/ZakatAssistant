@@ -15,7 +15,7 @@ export default async function NotificationsPage({ params }: { params: { locale: 
 
   return (
     <main className="mx-auto max-w-3xl space-y-2 p-4">
-      {notifications.map((notification) => (
+      {notifications.map((notification: { id: string; titleEn: string; titleUr: string; bodyEn: string; bodyUr: string }) => (
         <div key={notification.id} className="card">
           <h3 className="font-semibold">{isUr ? notification.titleUr : notification.titleEn}</h3>
           <p className="text-sm text-slate-700">{isUr ? notification.bodyUr : notification.bodyEn}</p>

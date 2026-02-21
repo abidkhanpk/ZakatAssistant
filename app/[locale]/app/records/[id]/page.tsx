@@ -28,11 +28,11 @@ export default async function RecordDetails({ params }: { params: { id: string; 
         </form>
       </div>
 
-      {record.categories.map((category) => (
+      {record.categories.map((category: { id: string; nameEn: string; nameUr: string; items: { id: string; description: string; amount: unknown }[] }) => (
         <div key={category.id} className="card">
           <h2 className="font-semibold">{isUr ? category.nameUr : category.nameEn}</h2>
           <ul className="mt-2 space-y-1 text-sm">
-            {category.items.map((item) => (
+            {category.items.map((item: { id: string; description: string; amount: unknown }) => (
               <li key={item.id} className="flex items-center justify-between">
                 <span>{item.description}</span>
                 <span>{Number(item.amount).toFixed(2)}</span>

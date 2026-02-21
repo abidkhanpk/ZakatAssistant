@@ -6,6 +6,22 @@ import { CsrfInput } from '@/components/csrf-input';
 import { getSmtpSettings } from '@/lib/smtp';
 
 type Tab = 'users' | 'settings' | 'notifications';
+type AdminUser = {
+  id: string;
+  username: string;
+  email: string;
+  role: 'USER' | 'ADMIN';
+  emailVerifiedAt: Date | null;
+};
+type DeliveryLog = {
+  id: string;
+  sentAt: Date;
+  channel: string;
+  status: string;
+  error: string | null;
+  user: { email: string; username: string };
+  notification: { titleEn: string; createdAt: Date };
+};
 
 function TabLink({ locale, tab, activeTab, label }: { locale: string; tab: Tab; activeTab: Tab; label: string }) {
   return (
@@ -34,8 +50,12 @@ export default async function AdminPage({
       ? searchParams.tab
       : 'users';
 
-  const users = activeTab === 'users' || activeTab === 'notifications'
-    ? await prisma.user.findMany({ where: activeTab === 'notifications' ? { emailVerifiedAt: { not: null } } : undefined, orderBy: { createdAt: 'desc' } })
+  const users: AdminUser[] = activeTab === 'users' || activeTab === 'notifications'
+    ? await prisma.user.findMany({
+        where: activeTab === 'notifications' ? { emailVerifiedAt: { not: null } } : undefined,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, username: true, email: true, role: true, emailVerifiedAt: true }
+      })
     : [];
 
   const smtp = activeTab === 'settings' ? await getSmtpSettings() : null;
@@ -45,7 +65,7 @@ export default async function AdminPage({
     : null;
   const templateValue = (template?.value || {}) as Record<string, string>;
 
-  const logs = activeTab === 'notifications'
+  const logs: DeliveryLog[] = activeTab === 'notifications'
     ? await prisma.notificationDeliveryLog.findMany({
         include: {
           user: { select: { email: true, username: true } },

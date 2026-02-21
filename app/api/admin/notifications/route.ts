@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     ? [data.recipientUserId]
     : (
         await prisma.user.findMany({ where: { emailVerifiedAt: { not: null } }, select: { id: true } })
-      ).map((u) => u.id);
+      ).map((u: { id: string }) => u.id);
 
   const notification = await prisma.notification.create({
     data: {
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
   });
 
   await Promise.all(
-    targetUserIds.map(async (userId) => {
+    targetUserIds.map(async (userId: string) => {
       await prisma.notificationDeliveryLog.create({
         data: {
           notificationId: notification.id,
