@@ -24,14 +24,14 @@ body { @apply bg-slate-50 text-slate-900; }
 }
 
 .breadcrumbs li + li {
-  margin-left: 1px;
+  margin-left: 0;
 }
 
 .breadcrumbs li a {
   position: relative;
   display: inline-flex;
   align-items: center;
-  height: 2.35rem;
+  height: 38px;
   padding: 0 1rem 0 1.75rem;
   border: 1px solid #d8e0ea;
   border-left: 0;
