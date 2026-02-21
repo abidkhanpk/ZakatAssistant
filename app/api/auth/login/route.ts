@@ -5,7 +5,11 @@ import { verifyPassword, signSession, setAuthCookieOnResponse } from '@/lib/auth
 import { isSameOrigin } from '@/lib/security';
 import { hasValidCsrfToken } from '@/lib/csrf';
 
-const schema = z.object({ email: z.string().email(), password: z.string(), locale: z.string().default('en') });
+const schema = z.object({
+  identifier: z.string().min(1),
+  password: z.string(),
+  locale: z.string().default('en')
+});
 
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Invalid origin' }, { status: 403 });
@@ -22,7 +26,12 @@ export async function POST(req: Request) {
       return NextResponse.redirect(new URL(`/${locale}/login?error=1`, req.url), 303);
     }
 
-    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    const identifier = parsed.data.identifier.trim();
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier }, { username: identifier }]
+      }
+    });
     if (!user || !user.emailVerifiedAt) {
       return NextResponse.redirect(new URL(`/${locale}/login?error=1`, req.url), 303);
     }

@@ -5,6 +5,8 @@ import { prisma } from './prisma';
 import type { NextResponse } from 'next/server';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret');
+const appUrl = process.env.APP_URL || '';
+const shouldUseSecureCookies = process.env.COOKIE_SECURE === 'true' || appUrl.startsWith('https://');
 
 export async function hashPassword(password: string) {
   return argon2.hash(password);
@@ -26,7 +28,7 @@ export async function signSession(userId: string, role: string) {
 const authCookieOptions = {
   httpOnly: true,
   sameSite: 'lax' as const,
-  secure: process.env.NODE_ENV === 'production',
+  secure: shouldUseSecureCookies,
   path: '/'
 };
 

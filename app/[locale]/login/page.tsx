@@ -8,7 +8,7 @@ export default function LoginPage({ params }: { params: { locale: string } }) {
         <CsrfInput />
         <input type="hidden" name="locale" value={params.locale} />
         <h1 className="text-2xl font-semibold">ZakatAssistant Login</h1>
-        <input className="w-full rounded border p-2" name="email" placeholder="Email" required />
+        <input className="w-full rounded border p-2" name="identifier" placeholder="Email or User ID" required />
         <input className="w-full rounded border p-2" name="password" type="password" placeholder="Password" required />
         <button className="w-full rounded bg-brand p-2 text-white">Login</button>
         <Link className="block text-sm text-brand" href={`/${params.locale}/forgot-password`}>
