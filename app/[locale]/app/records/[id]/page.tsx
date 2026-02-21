@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { CsrfInput } from '@/components/csrf-input';
+import Link from 'next/link';
 
 export default async function RecordDetails({ params }: { params: { id: string; locale: string } }) {
   const user = await getCurrentUser();
@@ -21,11 +21,9 @@ export default async function RecordDetails({ params }: { params: { id: string; 
       <div className="card">
         <h1 className="text-2xl font-bold">{record.yearLabel}</h1>
         <p className="mt-1 text-sm text-slate-600">{isUr ? 'زکوٰۃ قابلِ ادا:' : 'Zakat payable:'} {Number(record.zakatPayable).toFixed(2)} {record.currency}</p>
-        <form className="mt-3" method="post" action={`/api/records/${record.id}/clone`}>
-          <CsrfInput />
-          <input type="hidden" name="locale" value={params.locale} />
-          <button className="rounded bg-brand px-3 py-2 text-white">{isUr ? 'اگلے سال نقل کریں' : 'Clone to next year'}</button>
-        </form>
+        <Link className="mt-3 inline-block rounded bg-brand px-3 py-2 text-white" href={`/${params.locale}/app/records/new?editRecordId=${record.id}`}>
+          {isUr ? 'ریکارڈ میں ترمیم کریں' : 'Edit record'}
+        </Link>
       </div>
 
       {record.categories.map((category: { id: string; nameEn: string; nameUr: string; items: { id: string; description: string; amount: unknown }[] }) => (

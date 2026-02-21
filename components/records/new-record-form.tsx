@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import { defaultCategoryTemplates, type CategoryTemplate } from '@/lib/default-categories';
+import { useRouter } from 'next/navigation';
 
 type Item = {
   description: string;
@@ -16,6 +17,18 @@ type Category = {
   type: 'ASSET' | 'LIABILITY';
   items: Item[];
   collapsed: boolean;
+};
+
+export type RecordFormInitialData = {
+  recordId?: string;
+  yearLabel: string;
+  calendarType: 'ISLAMIC' | 'GREGORIAN';
+  categories: {
+    nameEn: string;
+    nameUr: string;
+    type: 'ASSET' | 'LIABILITY';
+    items: Item[];
+  }[];
 };
 
 function localizeDefaultDescription(description: string, isUr: boolean) {
@@ -42,13 +55,41 @@ function move<T>(arr: T[], from: number, to: number) {
   return copy;
 }
 
-export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken: string }) {
+export function NewRecordForm({
+  locale,
+  csrfToken,
+  initialData,
+  formAction,
+  submitLabel,
+  promptImportFromId
+}: {
+  locale: string;
+  csrfToken: string;
+  initialData?: RecordFormInitialData;
+  formAction?: string;
+  submitLabel?: string;
+  promptImportFromId?: string;
+}) {
+  const router = useRouter();
   const isUr = locale === 'ur';
+  const [showImportPrompt, setShowImportPrompt] = useState(Boolean(promptImportFromId));
   const [mode, setMode] = useState<'WIZARD' | 'ADVANCED'>('WIZARD');
   const [wizardStep, setWizardStep] = useState(0);
-  const [yearLabel, setYearLabel] = useState(String(new Date().getFullYear()));
-  const [calendarType, setCalendarType] = useState<'ISLAMIC' | 'GREGORIAN'>('ISLAMIC');
-  const [categories, setCategories] = useState<Category[]>(() => defaultCategoryTemplates.map((template, idx) => toCategory(template, idx, isUr)));
+  const [yearLabel, setYearLabel] = useState(initialData?.yearLabel || String(new Date().getFullYear()));
+  const [calendarType, setCalendarType] = useState<'ISLAMIC' | 'GREGORIAN'>(initialData?.calendarType || 'ISLAMIC');
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (initialData?.categories?.length) {
+      return initialData.categories.map((category, idx) => ({
+        id: `cat-${idx}-${category.type}`,
+        nameEn: category.nameEn,
+        nameUr: category.nameUr,
+        type: category.type,
+        items: category.items.map((item) => ({ ...item })),
+        collapsed: false
+      }));
+    }
+    return defaultCategoryTemplates.map((template, idx) => toCategory(template, idx, isUr));
+  });
 
   const categorySteps = useMemo(() => categories.map((category) => category.id), [categories]);
   const visibleCategories = useMemo(() => {
@@ -131,7 +172,31 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
 
   return (
     <main className="mx-auto max-w-5xl space-y-4 p-4">
-      <motion.form initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} method="post" action="/api/records" className="space-y-4">
+      {showImportPrompt ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border bg-white p-5 shadow-xl">
+            <h3 className="text-lg font-semibold">{isUr ? 'پچھلے سال کا ڈیٹا' : 'Import Previous Year Data'}</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              {isUr
+                ? 'کیا آپ موجودہ سال کے لیے پچھلے سال کا ڈیٹا امپورٹ کرنا چاہتے ہیں؟'
+                : 'Would you like to import previous year data for the current year?'}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                className="rounded bg-brand px-3 py-2 text-white"
+                onClick={() => router.replace(`/${locale}/app/records/new?importFrom=${promptImportFromId}`)}
+              >
+                {isUr ? 'امپورٹ کریں' : 'Import'}
+              </button>
+              <button className="rounded border px-3 py-2" onClick={() => setShowImportPrompt(false)}>
+                {isUr ? 'نیا شروع کریں' : 'Start fresh'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <motion.form initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} method="post" action={formAction || '/api/records'} className="space-y-4">
         <input type="hidden" name="csrfToken" value={csrfToken} />
         <input type="hidden" name="locale" value={locale} />
         <input
@@ -284,7 +349,7 @@ export function NewRecordForm({ locale, csrfToken }: { locale: string; csrfToken
         <div className="sticky bottom-0 flex flex-wrap gap-2 bg-slate-50/95 py-3 backdrop-blur">
           <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('ASSET')}>{isUr ? 'اثاثہ زمرہ شامل کریں' : 'Add asset category'}</button>
           <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('LIABILITY')}>{isUr ? 'واجبات زمرہ شامل کریں' : 'Add liability category'}</button>
-          <button className="rounded bg-brand px-4 py-2 text-white">{isUr ? 'ریکارڈ محفوظ کریں' : 'Save record'}</button>
+          <button className="rounded bg-brand px-4 py-2 text-white">{submitLabel || (isUr ? 'ریکارڈ محفوظ کریں' : 'Save record')}</button>
         </div>
       </motion.form>
     </main>

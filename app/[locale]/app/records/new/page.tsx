@@ -1,7 +1,75 @@
 import { cookies } from 'next/headers';
 import { NewRecordForm } from '@/components/records/new-record-form';
+import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
-export default function NewRecordPage({ params }: { params: { locale: string } }) {
+export default async function NewRecordPage({
+  params,
+  searchParams
+}: {
+  params: { locale: string };
+  searchParams: { editRecordId?: string; importFrom?: string; skipImportPrompt?: string };
+}) {
+  const user = await getCurrentUser();
+  if (!user) redirect(`/${params.locale}/login`);
+
   const csrfToken = cookies().get('csrf_token')?.value || '';
-  return <NewRecordForm locale={params.locale} csrfToken={csrfToken} />;
+  const editRecordId = searchParams.editRecordId;
+  const importFromId = searchParams.importFrom;
+  const skipImportPrompt = searchParams.skipImportPrompt === '1';
+  const sourceRecordId = editRecordId || importFromId;
+
+  const sourceRecord = sourceRecordId
+    ? await prisma.zakatRecord.findFirst({
+        where: { id: sourceRecordId, userId: user.id },
+        include: { categories: { include: { items: true }, orderBy: { sortOrder: 'asc' } } }
+      })
+    : null;
+
+  const initialData = sourceRecord
+    ? {
+        recordId: editRecordId ? sourceRecord.id : undefined,
+        yearLabel: editRecordId ? sourceRecord.yearLabel : String(new Date().getFullYear()),
+        calendarType: sourceRecord.calendarType,
+        categories: sourceRecord.categories.map((category) => ({
+          nameEn: category.nameEn,
+          nameUr: category.nameUr,
+          type: category.type,
+          items: category.items.map((item) => ({
+            description: item.description,
+            amount: Number(item.amount)
+          }))
+        }))
+      }
+    : undefined;
+
+  const promptImportFromId =
+    !editRecordId && !importFromId && !skipImportPrompt
+      ? (
+          (
+            await prisma.zakatRecord.findFirst({
+              where: { userId: user.id, yearLabel: String(new Date().getFullYear() - 1) },
+              orderBy: { createdAt: 'desc' },
+              select: { id: true }
+            })
+          ) ||
+          (await prisma.zakatRecord.findFirst({
+            where: { userId: user.id },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true }
+          }))
+        )?.id
+      : undefined;
+
+  return (
+    <NewRecordForm
+      locale={params.locale}
+      csrfToken={csrfToken}
+      initialData={initialData}
+      formAction={editRecordId ? `/api/records/${editRecordId}` : '/api/records'}
+      submitLabel={editRecordId ? (params.locale === 'ur' ? 'ریکارڈ اپ ڈیٹ کریں' : 'Update record') : undefined}
+      promptImportFromId={promptImportFromId}
+    />
+  );
 }
