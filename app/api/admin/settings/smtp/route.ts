@@ -42,13 +42,13 @@ export async function POST(req: Request) {
   if (url.searchParams.get('test')) {
     try {
       await sendEmail(String(formData.to || ''), 'ZakatAssistant SMTP test', 'SMTP works');
-      return NextResponse.redirect(new URL(`/${locale}/admin/settings?smtpTest=ok`, req.url), 303);
+      return NextResponse.redirect(new URL(`/${locale}/admin?tab=settings&smtpTest=ok`, req.url), 303);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'SMTP test failed';
       const errorCode = /socket close|ECONNRESET|ETIMEDOUT|ESOCKET/i.test(message)
         ? 'smtp-connection-failed'
         : 'smtp-test-failed';
-      return NextResponse.redirect(new URL(`/${locale}/admin/settings?smtpError=${errorCode}`, req.url), 303);
+      return NextResponse.redirect(new URL(`/${locale}/admin?tab=settings&smtpError=${errorCode}`, req.url), 303);
     }
   }
 
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   const current = await getSmtpSettings();
   const nextPassword = data.password && data.password.trim() ? data.password : current?.password || '';
   if (!nextPassword) {
-    return NextResponse.redirect(new URL(`/${locale}/admin/settings?smtpError=password-required`, req.url), 303);
+    return NextResponse.redirect(new URL(`/${locale}/admin?tab=settings&smtpError=password-required`, req.url), 303);
   }
 
   await upsertSetting('smtp.host', data.host);
@@ -67,5 +67,5 @@ export async function POST(req: Request) {
   await upsertSetting('smtp.fromName', data.fromName);
   await upsertSetting('smtp.fromEmail', data.fromEmail);
 
-  return NextResponse.redirect(new URL(`/${locale}/admin/settings`, req.url), 303);
+  return NextResponse.redirect(new URL(`/${locale}/admin?tab=settings`, req.url), 303);
 }

@@ -15,7 +15,7 @@ export function LanguageSwitcher({ locale }: { locale: 'en' | 'ur' }) {
   return (
     <Link
       href={href}
-      className="fixed right-3 top-3 z-50 rounded-full border bg-white/90 px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur"
+      className="rounded-full border bg-white/90 px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur"
       aria-label={locale === 'en' ? 'Switch language to Urdu' : 'Switch language to English'}
     >
       {locale === 'en' ? 'اردو' : 'EN'}

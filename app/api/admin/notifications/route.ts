@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       create: { key: 'annualReminderTemplate', value: template },
       update: { value: template }
     });
-    return NextResponse.redirect(new URL(`/${data.locale}/admin/notifications`, req.url), 303);
+    return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=notifications`, req.url), 303);
   }
 
   const data = sendSchema.parse(form);
@@ -105,5 +105,5 @@ export async function POST(req: Request) {
     })
   );
 
-  return NextResponse.redirect(new URL(`/${data.locale}/admin/notifications`, req.url), 303);
+  return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=notifications`, req.url), 303);
 }

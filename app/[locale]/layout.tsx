@@ -1,10 +1,13 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
-import { LanguageSwitcher } from '@/components/language-switcher';
+import { getCurrentUser } from '@/lib/auth';
+import { TopRightControls } from '@/components/top-right-controls';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 
 export default async function LocaleLayout({ children, params }: { children: React.ReactNode; params: { locale: string } }) {
   const messages = await getMessages();
   const isUr = params.locale === 'ur';
+  const user = await getCurrentUser();
 
   return (
     <div
@@ -16,7 +19,21 @@ export default async function LocaleLayout({ children, params }: { children: Rea
       }}
     >
       <NextIntlClientProvider locale={params.locale} messages={messages}>
-        <LanguageSwitcher locale={isUr ? 'ur' : 'en'} />
+        <TopRightControls
+          locale={isUr ? 'ur' : 'en'}
+          user={
+            user
+              ? {
+                  name: user.name,
+                  username: user.username,
+                  role: user.role
+                }
+              : null
+          }
+        />
+        <div className="mx-auto max-w-6xl px-4 pt-14">
+          <Breadcrumbs locale={isUr ? 'ur' : 'en'} />
+        </div>
         {children}
       </NextIntlClientProvider>
     </div>

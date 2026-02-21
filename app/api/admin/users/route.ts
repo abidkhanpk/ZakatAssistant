@@ -52,7 +52,7 @@ export async function POST(req: Request) {
         emailVerifiedAt: data.verified ? new Date() : null
       }
     });
-    return NextResponse.redirect(new URL(`/${data.locale}/admin/users`, req.url), 303);
+    return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
   }
 
   if (action === 'update-meta') {
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         emailVerifiedAt: data.verified ? new Date() : null
       }
     });
-    return NextResponse.redirect(new URL(`/${data.locale}/admin/users`, req.url), 303);
+    return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
   }
 
   if (action === 'reset-password') {
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       where: { id: data.userId },
       data: { passwordHash: await hashPassword(data.newPassword) }
     });
-    return NextResponse.redirect(new URL(`/${data.locale}/admin/users`, req.url), 303);
+    return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
   }
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
