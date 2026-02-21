@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AreaChart, ChartNoAxesColumnIncreasing, HandCoins, WalletCards } from 'lucide-react';
 
 type MetricKey = 'totalAssets' | 'totalDeductions' | 'netZakatable' | 'zakatPayable';
@@ -79,6 +79,7 @@ function toChartPoints(values: number[], width: number, height: number) {
 export function YearlyMetricsDashboard({ locale, points }: { locale: string; points: YearlyPoint[] }) {
   const isUr = locale === 'ur';
   const [selected, setSelected] = useState<MetricKey>('zakatPayable');
+  const chartRefs = useRef<Partial<Record<MetricKey, HTMLDivElement | null>>>({});
   const formatter = useMemo(
     () =>
       new Intl.NumberFormat(isUr ? 'ur-PK' : 'en-US', {
@@ -110,11 +111,13 @@ export function YearlyMetricsDashboard({ locale, points }: { locale: string; poi
     );
   }
 
-  const activeConfig = metricConfigs.find((metric) => metric.key === selected) || metricConfigs[0];
-  const values = sorted.map((point) => point[selected]);
-  const pointsString = toChartPoints(values, 760, 280);
-  const areaString = pointsString ? `${pointsString} 740,244 40,244` : '';
-  const latest = values[values.length - 1] || 0;
+  function focusChart(metric: MetricKey) {
+    setSelected(metric);
+    const target = chartRefs.current[metric];
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    target.focus({ preventScroll: true });
+  }
 
   return (
     <section className="space-y-3">
@@ -128,7 +131,7 @@ export function YearlyMetricsDashboard({ locale, points }: { locale: string; poi
             <button
               key={metric.key}
               type="button"
-              onClick={() => setSelected(metric.key)}
+              onClick={() => focusChart(metric.key)}
               className={`card text-left transition ${isActive ? 'ring-2 ring-brand/40' : 'hover:border-brand/40 hover:shadow-md'}`}
             >
               <div className="mb-2 flex items-center justify-between">
@@ -141,39 +144,56 @@ export function YearlyMetricsDashboard({ locale, points }: { locale: string; poi
         })}
       </div>
 
-      <div className="card overflow-x-auto">
-        <div className="mb-3 flex items-baseline justify-between gap-2">
-          <h3 className="font-semibold">{isUr ? activeConfig.labelUr : activeConfig.labelEn}</h3>
-          <p className="text-sm text-slate-500">
-            {isUr ? 'تازہ ترین' : 'Latest'}: <span className="font-semibold text-slate-800">{formatter.format(latest)}</span>
-          </p>
-        </div>
-        <svg viewBox="0 0 760 280" className="h-72 w-full min-w-[560px]">
-          <line x1="40" y1="244" x2="740" y2="244" stroke="#cbd5e1" strokeWidth="1" />
-          <line x1="40" y1="20" x2="40" y2="244" stroke="#cbd5e1" strokeWidth="1" />
-          {areaString ? <polygon points={areaString} fill={activeConfig.fill} /> : null}
-          {pointsString ? <polyline fill="none" stroke={activeConfig.stroke} strokeWidth="3" points={pointsString} strokeLinejoin="round" strokeLinecap="round" /> : null}
-          {sorted.map((point, idx) => {
-            const max = Math.max(...values, 1);
-            const min = Math.min(...values, 0);
-            const range = Math.max(max - min, 1);
-            const left = 40;
-            const right = 740;
-            const top = 20;
-            const bottom = 244;
-            const xStep = sorted.length > 1 ? (right - left) / (sorted.length - 1) : 0;
-            const x = left + idx * xStep;
-            const y = bottom - ((point[selected] - min) / range) * (bottom - top);
-            return (
-              <g key={`${point.yearLabel}-${selected}`}>
-                <circle cx={x} cy={y} r="4.5" fill={activeConfig.stroke} />
-                <text x={x} y={266} textAnchor="middle" fontSize="12" fill="#64748b">
-                  {point.yearLabel}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+      <div className="grid gap-3 md:grid-cols-2">
+        {metricConfigs.map((metric) => {
+          const values = sorted.map((point) => point[metric.key]);
+          const latest = values[values.length - 1] || 0;
+          const pointsString = toChartPoints(values, 760, 280);
+          const areaString = pointsString ? `${pointsString} 740,244 40,244` : '';
+          return (
+            <div
+              key={`chart-${metric.key}`}
+              ref={(el) => {
+                chartRefs.current[metric.key] = el;
+              }}
+              tabIndex={-1}
+              className={`card overflow-x-auto outline-none transition ${selected === metric.key ? 'ring-2 ring-brand/40' : ''}`}
+            >
+              <div className="mb-3 flex items-baseline justify-between gap-2">
+                <h3 className="font-semibold">{isUr ? metric.labelUr : metric.labelEn}</h3>
+                <p className="text-sm text-slate-500">
+                  {isUr ? 'تازہ ترین' : 'Latest'}: <span className="font-semibold text-slate-800">{formatter.format(latest)}</span>
+                </p>
+              </div>
+              <svg viewBox="0 0 760 280" className="h-72 w-full min-w-[560px]">
+                <line x1="40" y1="244" x2="740" y2="244" stroke="#cbd5e1" strokeWidth="1" />
+                <line x1="40" y1="20" x2="40" y2="244" stroke="#cbd5e1" strokeWidth="1" />
+                {areaString ? <polygon points={areaString} fill={metric.fill} /> : null}
+                {pointsString ? <polyline fill="none" stroke={metric.stroke} strokeWidth="3" points={pointsString} strokeLinejoin="round" strokeLinecap="round" /> : null}
+                {sorted.map((point, idx) => {
+                  const max = Math.max(...values, 1);
+                  const min = Math.min(...values, 0);
+                  const range = Math.max(max - min, 1);
+                  const left = 40;
+                  const right = 740;
+                  const top = 20;
+                  const bottom = 244;
+                  const xStep = sorted.length > 1 ? (right - left) / (sorted.length - 1) : 0;
+                  const x = left + idx * xStep;
+                  const y = bottom - ((point[metric.key] - min) / range) * (bottom - top);
+                  return (
+                    <g key={`${point.yearLabel}-${metric.key}`}>
+                      <circle cx={x} cy={y} r="4.5" fill={metric.stroke} />
+                      <text x={x} y={266} textAnchor="middle" fontSize="12" fill="#64748b">
+                        {point.yearLabel}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
