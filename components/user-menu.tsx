@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
@@ -37,11 +38,11 @@ export function UserMenu({ locale, user, csrfToken }: UserMenuProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-8 w-8 items-center justify-center rounded-full border bg-white/90 text-sm shadow-sm"
+        className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border border-brand/35 bg-brand/10 text-brand shadow-sm"
         aria-expanded={open}
         aria-label={isUr ? 'صارف مینو' : 'User menu'}
       >
-        👤
+        <User size={15} strokeWidth={2.2} />
       </button>
       {open ? (
         <div className="absolute right-0 mt-2 w-56 rounded-xl border bg-white p-3 shadow-lg">

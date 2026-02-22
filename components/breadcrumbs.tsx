@@ -27,7 +27,10 @@ export function Breadcrumbs({ locale }: { locale: 'en' | 'ur' }) {
   const segments = pathname.split('/').filter(Boolean);
   const withoutLocale = segments[0] === 'en' || segments[0] === 'ur' ? segments.slice(1) : segments;
   const isAppHome = withoutLocale.length === 1 && withoutLocale[0] === 'app';
-  if (isAppHome) return null;
+  const isAuthEntryRoute =
+    withoutLocale.length === 0 ||
+    (withoutLocale.length === 1 && ['login', 'signup'].includes(withoutLocale[0].toLowerCase()));
+  if (isAppHome || isAuthEntryRoute) return null;
 
   const editYear = searchParams.get('editYear');
   const recordYear = searchParams.get('year');
