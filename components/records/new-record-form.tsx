@@ -35,6 +35,9 @@ export type RecordFormInitialData = {
 function localizeDefaultDescription(description: string, isUr: boolean) {
   if (description === 'Amount') return isUr ? 'تفصیل' : 'Description';
   if (description === 'Other') return isUr ? 'دیگر' : 'Other';
+  if (description === 'Gold') return isUr ? 'سونا' : 'Gold';
+  if (description === 'Silver') return isUr ? 'چاندی' : 'Silver';
+  if (description === 'Other precious items') return isUr ? 'دیگر قیمتی اشیاء' : 'Other precious items';
   return description;
 }
 

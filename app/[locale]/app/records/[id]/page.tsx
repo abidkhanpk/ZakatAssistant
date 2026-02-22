@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { CsrfInput } from '@/components/csrf-input';
 
 export default async function RecordDetails({
   params,
@@ -47,12 +48,25 @@ export default async function RecordDetails({
             <p className="font-semibold">{Number(record.zakatPayable).toFixed(2)} {record.currency}</p>
           </div>
         </div>
-        <Link
-          className="mt-4 inline-block rounded bg-brand px-3 py-2 text-white"
-          href={`/${params.locale}/app/records/new?editRecordId=${record.id}&editYear=${encodeURIComponent(record.yearLabel)}`}
-        >
-          {isUr ? 'ریکارڈ میں ترمیم کریں' : 'Edit record'}
-        </Link>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Link
+            className="inline-block rounded bg-brand px-3 py-2 text-white"
+            href={`/${params.locale}/app/records/new?editRecordId=${record.id}&editYear=${encodeURIComponent(record.yearLabel)}`}
+          >
+            {isUr ? 'ریکارڈ میں ترمیم کریں' : 'Edit record'}
+          </Link>
+          <form method="post" action={`/api/records/${record.id}`}>
+            <CsrfInput />
+            <input type="hidden" name="locale" value={params.locale} />
+            <input type="hidden" name="intent" value="delete" />
+            <button
+              type="submit"
+              className="inline-block rounded border border-red-200 bg-red-50 px-3 py-2 text-red-700 hover:bg-red-100"
+            >
+              {isUr ? 'ریکارڈ حذف کریں' : 'Delete record'}
+            </button>
+          </form>
+        </div>
       </div>
 
       {record.categories.map((category: { id: string; nameEn: string; nameUr: string; items: { id: string; description: string; amount: unknown }[] }) => (

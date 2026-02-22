@@ -35,11 +35,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const formData = await req.formData();
   if (!hasValidCsrfToken(req, formData)) return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
+  const intent = String(formData.get('intent') || '');
+  const locale = String(formData.get('locale') || 'en');
 
   const existing = await prisma.zakatRecord.findFirst({
     where: { id: params.id, userId: user.id }
   });
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  if (intent === 'delete') {
+    await prisma.zakatRecord.delete({
+      where: { id: existing.id }
+    });
+    return NextResponse.redirect(new URL(`/${locale}/app/records`, req.url), 303);
+  }
 
   const form = Object.fromEntries(formData);
   const rawPayload = JSON.parse(String(form.payload || '{}'));

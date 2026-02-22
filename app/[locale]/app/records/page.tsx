@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { NewRecordButton } from '@/components/records/new-record-button';
+import { CsrfInput } from '@/components/csrf-input';
 
 export default async function RecordsPage({ params }: { params: { locale: string } }) {
   const user = await getCurrentUser();
@@ -44,6 +45,7 @@ export default async function RecordsPage({ params }: { params: { locale: string
               <th className="p-2">{isUr ? 'کل واجبات' : 'Total Liabilities'}</th>
               <th className="p-2">{isUr ? 'خالص اثاثے' : 'Net Assets'}</th>
               <th className="p-2">{isUr ? 'زکوٰۃ قابلِ ادا' : 'Zakat Payable'}</th>
+              <th className="p-2">{isUr ? 'عمل' : 'Actions'}</th>
             </tr>
           </thead>
           <tbody>
@@ -58,6 +60,27 @@ export default async function RecordsPage({ params }: { params: { locale: string
                 <td className="p-2">{formatter.format(Number(record.totalDeductions))}</td>
                 <td className="p-2">{formatter.format(Number(record.netZakatable))}</td>
                 <td className="p-2">{formatter.format(Number(record.zakatPayable))}</td>
+                <td className="p-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      className="inline-flex rounded bg-brand px-2 py-1 text-xs font-medium text-white"
+                      href={`/${params.locale}/app/records/new?editRecordId=${record.id}&editYear=${encodeURIComponent(record.yearLabel)}`}
+                    >
+                      {isUr ? 'ترمیم' : 'Edit'}
+                    </Link>
+                    <form method="post" action={`/api/records/${record.id}`}>
+                      <CsrfInput />
+                      <input type="hidden" name="locale" value={params.locale} />
+                      <input type="hidden" name="intent" value="delete" />
+                      <button
+                        type="submit"
+                        className="inline-flex rounded border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                      >
+                        {isUr ? 'حذف' : 'Delete'}
+                      </button>
+                    </form>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
