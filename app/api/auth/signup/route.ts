@@ -7,6 +7,7 @@ import { sha256 } from '@/lib/crypto';
 import { sendEmail } from '@/lib/smtp';
 import { isSameOrigin } from '@/lib/security';
 import { hasValidCsrfToken } from '@/lib/csrf';
+import { getRequestOrigin } from '@/lib/request-origin';
 
 const schema = z.object({
   username: z.string().min(3),
@@ -43,9 +44,16 @@ export async function POST(req: Request) {
     }
   });
 
-  const link = `${process.env.APP_URL || 'http://localhost:3000'}/api/auth/verify?locale=${data.locale}&token=${token}`;
+  const link = `${getRequestOrigin(req)}/api/auth/verify?locale=${data.locale}&token=${token}`;
+  const body = `
+    <p>Hello ${user.name || user.username},</p>
+    <p>Welcome to ZakatAssistant. Please verify your email address to activate your account.</p>
+    <p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Verify email</a></p>
+    <p>If the button does not work, copy and paste this link into your browser:</p>
+    <p><a href="${link}">${link}</a></p>
+  `;
   try {
-    await sendEmail(user.email, 'Verify your email', `<a href="${link}">Verify Email</a>`);
+    await sendEmail(user.email, 'Verify your email', body);
   } catch {
     // Keep signup successful even if SMTP is not configured yet.
   }

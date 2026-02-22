@@ -1,19 +1,30 @@
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
-import argon2 from 'argon2';
+import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'crypto';
+import { promisify } from 'util';
 import { prisma } from './prisma';
 import type { NextResponse } from 'next/server';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret');
 const appUrl = process.env.APP_URL || '';
 const shouldUseSecureCookies = process.env.COOKIE_SECURE === 'true' || appUrl.startsWith('https://');
+const scrypt = promisify(scryptCallback);
+const SCRYPT_PREFIX = 'scrypt';
 
 export async function hashPassword(password: string) {
-  return argon2.hash(password);
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
+  return `${SCRYPT_PREFIX}$${salt}$${derivedKey.toString('hex')}`;
 }
 
 export async function verifyPassword(hash: string, password: string) {
-  return argon2.verify(hash, password);
+  const parts = hash.split('$');
+  if (parts.length !== 3 || parts[0] !== SCRYPT_PREFIX) return false;
+
+  const [, salt, storedHex] = parts;
+  const storedKey = Buffer.from(storedHex, 'hex');
+  const derivedKey = (await scrypt(password, salt, storedKey.length)) as Buffer;
+  return timingSafeEqual(storedKey, derivedKey);
 }
 
 export async function signSession(userId: string, role: string) {

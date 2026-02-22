@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { isSameOrigin } from '@/lib/security';
 import { sha256 } from '@/lib/crypto';
 import { sendEmail } from '@/lib/smtp';
+import { getRequestOrigin } from '@/lib/request-origin';
 
 const updateProfileSchema = z.object({
   action: z.literal('update-profile'),
@@ -48,8 +49,16 @@ export async function POST(req: Request) {
         create: { key: `email-change:${tokenHash}`, value: { email: data.email } },
         update: { value: { email: data.email } }
       });
-      const link = `${process.env.APP_URL || 'http://localhost:3000'}/api/auth/verify?locale=${data.locale}&token=${token}&purpose=email-change`;
-      await sendEmail(data.email, 'Confirm your new email', `<a href="${link}">Confirm Email</a>`);
+      const link = `${getRequestOrigin(req)}/api/auth/verify?locale=${data.locale}&token=${token}&purpose=email-change`;
+      const body = `
+        <p>Hello ${user.name || user.username},</p>
+        <p>We received a request to change your ZakatAssistant email address. Confirm your new email using the button below.</p>
+        <p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Confirm email</a></p>
+        <p>If the button does not work, copy and paste this link into your browser:</p>
+        <p><a href="${link}">${link}</a></p>
+        <p>If you did not request this, you can ignore this email.</p>
+      `;
+      await sendEmail(data.email, 'Confirm your new email', body);
     }
 
     return NextResponse.redirect(new URL(`/${data.locale}/app/profile`, req.url), 303);
