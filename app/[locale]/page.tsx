@@ -23,6 +23,9 @@ export default async function Home({ params }: { params: { locale: string } }) {
         <Link className="block text-sm text-brand" href={`/${params.locale}/forgot-password`}>
           {isUr ? 'پاس ورڈ بھول گئے؟' : 'Forgot password?'}
         </Link>
+        <Link className="block text-sm text-brand" href={`/${params.locale}/signup`}>
+          {isUr ? 'نیا اکاؤنٹ بنائیں' : 'Create account'}
+        </Link>
       </form>
     </main>
   );
