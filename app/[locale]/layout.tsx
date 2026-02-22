@@ -10,14 +10,21 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const isUr = params.locale === 'ur';
   const user = await getCurrentUser();
 
-  const notifications = user
-    ? await prisma.notification.findMany({
+  let notifications:
+    | { id: string; titleEn: string; titleUr: string; readAt: Date | null }[]
+    | [] = [];
+  if (user) {
+    try {
+      notifications = await prisma.notification.findMany({
         where: { OR: [{ recipientUserId: user.id }, { recipientUserId: null }] },
         orderBy: { createdAt: 'desc' },
         take: 5,
         select: { id: true, titleEn: true, titleUr: true, readAt: true }
-      })
-    : [];
+      });
+    } catch {
+      notifications = [];
+    }
+  }
   type NotificationRow = (typeof notifications)[number];
 
   return (

@@ -22,9 +22,15 @@ function normalizeDatabaseUrl(url?: string) {
 }
 
 const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL);
-const adapter = new PrismaPg({ connectionString: databaseUrl });
+const adapter = databaseUrl ? new PrismaPg({ connectionString: databaseUrl }) : undefined;
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  adapter
-});
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient(
+    adapter
+      ? {
+          adapter
+        }
+      : undefined
+  );
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
