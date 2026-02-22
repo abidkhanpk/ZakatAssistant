@@ -13,20 +13,18 @@ export type CategoryTemplate = {
 export const defaultCategoryTemplates: CategoryTemplate[] = [
   {
     type: 'ASSET',
-    nameEn: 'Gold',
-    nameUr: 'سونا',
+    nameEn: 'Jewelry & precious metals',
+    nameUr: 'زیورات اور قیمتی دھاتیں',
     items: [
-      { description: '24k', amount: 0 },
-      { description: '22k', amount: 0 },
-      { description: '18k', amount: 0 },
-      { description: 'Other', amount: 0 }
+      { description: 'Gold', amount: 0 },
+      { description: 'Silver', amount: 0 },
+      { description: 'Other precious items', amount: 0 }
     ]
   },
   { type: 'ASSET', nameEn: 'Property purchased for onward sale', nameUr: 'فروخت کے لیے خریدی گئی جائیداد', items: [{ description: 'Amount', amount: 0 }] },
   { type: 'ASSET', nameEn: 'Cash & bank accounts', nameUr: 'نقدی اور بینک اکاؤنٹس', items: [{ description: 'Amount', amount: 0 }] },
   { type: 'ASSET', nameEn: 'Receivable loans', nameUr: 'قابل وصول قرضے', items: [{ description: 'Amount', amount: 0 }] },
   { type: 'ASSET', nameEn: 'BC deposits not yet received', nameUr: 'بی سی ڈپازٹس جو ابھی وصول نہیں ہوئے', items: [{ description: 'Amount', amount: 0 }] },
-  { type: 'ASSET', nameEn: 'Silver', nameUr: 'چاندی', items: [{ description: 'Amount', amount: 0 }] },
   { type: 'ASSET', nameEn: 'Foreign currency', nameUr: 'غیر ملکی کرنسی', items: [{ description: 'Amount', amount: 0 }] },
   { type: 'ASSET', nameEn: 'Prize bonds', nameUr: 'پرائز بانڈز', items: [{ description: 'Amount', amount: 0 }] },
   { type: 'ASSET', nameEn: 'Insurance premium paid', nameUr: 'ادا شدہ انشورنس پریمیم', items: [{ description: 'Amount', amount: 0 }] },

@@ -141,3 +141,45 @@ body { @apply bg-slate-50 text-slate-900; }
   color: #0b8f5f;
   background: #f5fbf8;
 }
+
+[dir='rtl'] .breadcrumbs li a {
+  padding: 0 1.75rem 0 1rem;
+  border-right: 0;
+  border-left: 1px solid #d8e0ea;
+}
+
+[dir='rtl'] .breadcrumbs li a::before {
+  left: auto;
+  right: 100%;
+  border-left: 0;
+  border-right: 13px solid #d8e0ea;
+}
+
+[dir='rtl'] .breadcrumbs li a::after {
+  left: auto;
+  right: calc(100% - 2px);
+  border-left: 0;
+  border-right: 13px solid #f7fafc;
+}
+
+[dir='rtl'] .breadcrumbs li.first a {
+  padding-right: 1rem;
+  border-right: 1px solid #d8e0ea;
+  border-left: 0;
+  border-radius: 0 0.55rem 0.55rem 0;
+}
+
+[dir='rtl'] .breadcrumbs li.active a {
+  border-radius: 0.55rem 0 0 0.55rem;
+  padding-left: 1rem;
+}
+
+[dir='rtl'] .breadcrumbs li:not(.first):not(.active):hover a::before,
+[dir='rtl'] .breadcrumbs li:not(.first):not(.active):focus-within a::before {
+  border-right-color: rgb(11 143 95 / 0.3);
+}
+
+[dir='rtl'] .breadcrumbs li:not(.first):not(.active):hover a::after,
+[dir='rtl'] .breadcrumbs li:not(.first):not(.active):focus-within a::after {
+  border-right-color: #f5fbf8;
+}
