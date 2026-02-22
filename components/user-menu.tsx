@@ -23,9 +23,11 @@ export function UserMenu({ locale, user }: UserMenuProps) {
           <Link className="block rounded border px-2 py-1 hover:bg-slate-50" href={`/${locale}/app/profile`}>
             {isUr ? 'پروفائل ترتیبات' : 'Profile settings'}
           </Link>
-          <Link className="block rounded border px-2 py-1 hover:bg-slate-50" href={`/${locale}/app/settings`}>
-            {isUr ? 'صارف ترتیبات' : 'User settings'}
-          </Link>
+          {user.role === 'ADMIN' ? (
+            <Link className="block rounded border px-2 py-1 hover:bg-slate-50" href={`/${locale}/admin?tab=settings`}>
+              {isUr ? 'ایڈمن ترتیبات' : 'Admin settings'}
+            </Link>
+          ) : null}
           <form method="post" action="/api/auth/logout">
             <input type="hidden" name="csrfToken" value={csrf} />
             <input type="hidden" name="locale" value={locale} />

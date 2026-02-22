@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Bell } from 'lucide-react';
 
 type NotificationItem = {
   id: string;
@@ -20,10 +21,10 @@ export function NotificationMenu({
   return (
     <details className="relative">
       <summary
-        className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border bg-white/90 text-sm shadow-sm"
+        className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border border-brand/35 bg-brand/10 text-brand shadow-sm"
         aria-label={isUr ? 'اطلاعات' : 'Notifications'}
       >
-        🔔
+        <Bell size={15} strokeWidth={2.2} />
         {unreadCount > 0 ? (
           <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-red-600 px-1 text-center text-[10px] text-white">
             {unreadCount}
