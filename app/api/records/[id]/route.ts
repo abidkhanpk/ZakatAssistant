@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -53,7 +52,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const liabilities = payload.categories.filter((c) => c.type === 'LIABILITY');
   const totals = calculateZakat({ calendarType: payload.calendarType, assets, liabilities });
 
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  await prisma.$transaction(async (tx) => {
     await tx.zakatRecord.update({
       where: { id: existing.id },
       data: {
@@ -96,7 +95,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         });
       }
     }
-  });
+  }, { timeout: 15000 });
 
   return NextResponse.redirect(
     new URL(`/${payload.locale}/app/records/${existing.id}?year=${encodeURIComponent(payload.yearLabel)}`, req.url),
