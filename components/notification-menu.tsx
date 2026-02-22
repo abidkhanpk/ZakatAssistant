@@ -1,5 +1,9 @@
+'use client';
+
 import Link from 'next/link';
 import { Bell } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 type NotificationItem = {
   id: string;
@@ -17,12 +21,34 @@ export function NotificationMenu({
   notifications: NotificationItem[];
 }) {
   const isUr = locale === 'ur';
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname, searchParams]);
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (!rootRef.current) return;
+      if (rootRef.current.contains(event.target as Node)) return;
+      setOpen(false);
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   return (
-    <details className="relative">
-      <summary
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
         className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border border-brand/35 bg-brand/10 text-brand shadow-sm"
         aria-label={isUr ? 'اطلاعات' : 'Notifications'}
+        aria-expanded={open}
       >
         <Bell size={15} strokeWidth={2.2} />
         {unreadCount > 0 ? (
@@ -30,8 +56,9 @@ export function NotificationMenu({
             {unreadCount}
           </span>
         ) : null}
-      </summary>
-      <div className="absolute right-0 mt-2 w-72 rounded-xl border bg-white p-3 shadow-lg">
+      </button>
+      {open ? (
+        <div className="absolute right-0 mt-2 w-72 rounded-xl border bg-white p-3 shadow-lg">
         <p className="mb-2 text-sm font-semibold">{isUr ? 'اطلاعات' : 'Notifications'}</p>
         <div className="space-y-2 text-sm">
           {notifications.length ? (
@@ -44,10 +71,11 @@ export function NotificationMenu({
             <p className="text-slate-500">{isUr ? 'کوئی اطلاع نہیں' : 'No notifications'}</p>
           )}
         </div>
-        <Link href={`/${locale}/app/notifications`} className="mt-3 block rounded border px-2 py-1 text-center">
+        <Link href={`/${locale}/app/notifications`} className="mt-3 block rounded border px-2 py-1 text-center" onClick={() => setOpen(false)}>
           {isUr ? 'تمام دیکھیں' : 'View all'}
         </Link>
-      </div>
-    </details>
+        </div>
+      ) : null}
+    </div>
   );
 }
