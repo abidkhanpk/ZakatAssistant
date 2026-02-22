@@ -5,8 +5,9 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefi
 
 function normalizeDatabaseUrl(url?: string) {
   if (!url) return '';
+  const trimmed = url.trim().replace(/^['"]|['"]$/g, '');
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(trimmed);
     const sslMode = parsed.searchParams.get('sslmode');
     const useLibpqCompat = parsed.searchParams.get('uselibpqcompat') === 'true';
 
@@ -17,12 +18,19 @@ function normalizeDatabaseUrl(url?: string) {
 
     return parsed.toString();
   } catch {
-    return url;
+    return trimmed;
   }
 }
 
 const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL);
-const adapter = databaseUrl ? new PrismaPg({ connectionString: databaseUrl }) : undefined;
+let adapter: PrismaPg | undefined;
+if (databaseUrl) {
+  try {
+    adapter = new PrismaPg({ connectionString: databaseUrl });
+  } catch {
+    adapter = undefined;
+  }
+}
 
 export const prisma =
   globalForPrisma.prisma ??

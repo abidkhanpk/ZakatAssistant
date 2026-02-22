@@ -1,6 +1,6 @@
 {
   "name": "zakatassistant",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,8 +12,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
     "prisma:studio": "prisma studio",
-    "seed": "tsx prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
