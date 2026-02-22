@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { CsrfInput } from '@/components/csrf-input';
 import { getSmtpSettings } from '@/lib/smtp';
+import { MAX_RECORDS_MUTATION_TIMEOUT_MS, MIN_RECORDS_MUTATION_TIMEOUT_MS, getRecordMutationTimeoutMs } from '@/lib/runtime-settings';
 
 type Tab = 'users' | 'settings' | 'notifications';
 
@@ -24,7 +25,7 @@ function TabLink({ locale, tab, activeTab, label }: { locale: string; tab: Tab; 
   );
 }
 
-export default async function AdminPage({ params, searchParams }: { params: { locale: string }; searchParams: { tab?: string; smtpError?: string; smtpTest?: string } }) {
+export default async function AdminPage({ params, searchParams }: { params: { locale: string }; searchParams: { tab?: string; smtpError?: string; smtpTest?: string; runtimeSaved?: string; runtimeError?: string } }) {
   const admin = await getCurrentUser();
   if (!admin) redirect(`/${params.locale}/login`);
   if (admin.role !== 'ADMIN') redirect(`/${params.locale}/app`);
@@ -41,6 +42,7 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
     : [];
 
   const smtp = activeTab === 'settings' ? await getSmtpSettings() : null;
+  const recordsMutationTimeoutMs = activeTab === 'settings' ? await getRecordMutationTimeoutMs() : null;
   const template = activeTab === 'notifications' ? await prisma.appSetting.findUnique({ where: { key: 'annualReminderTemplate' } }) : null;
   const templateValue = (template?.value || {}) as Record<string, string>;
 
@@ -105,6 +107,36 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
         <>
           {searchParams.smtpError ? <p className="text-sm text-red-600">{isUr ? 'SMTP خرابی' : 'SMTP error'}</p> : null}
           {searchParams.smtpTest === 'ok' ? <p className="text-sm text-green-700">{isUr ? 'SMTP ٹیسٹ ای میل بھیج دی گئی۔' : 'SMTP test email sent successfully.'}</p> : null}
+          {searchParams.runtimeSaved === '1' ? <p className="text-sm text-green-700">{isUr ? 'رن ٹائم ٹائم آؤٹ محفوظ ہو گیا۔' : 'Runtime timeout saved successfully.'}</p> : null}
+          {searchParams.runtimeError ? <p className="text-sm text-red-600">{isUr ? 'رن ٹائم ٹائم آؤٹ غلط ہے۔' : 'Invalid runtime timeout value.'}</p> : null}
+          <form className="card grid gap-2 md:grid-cols-2" method="post" action="/api/admin/settings/runtime">
+            <CsrfInput />
+            <input type="hidden" name="locale" value={params.locale} />
+            <div className="md:col-span-2">
+              <h2 className="text-lg font-semibold">{isUr ? 'رن ٹائم ٹائم آؤٹ' : 'Runtime Timeout'}</h2>
+              <p className="text-sm text-slate-600">
+                {isUr
+                  ? 'ریکارڈ اپ ڈیٹ کے دوران پراسیس ٹائم آؤٹ ملی سیکنڈ میں سیٹ کریں۔'
+                  : 'Set record update processing timeout in milliseconds.'}
+              </p>
+            </div>
+            <input
+              name="recordsMutationTimeoutMs"
+              type="number"
+              min={MIN_RECORDS_MUTATION_TIMEOUT_MS}
+              max={MAX_RECORDS_MUTATION_TIMEOUT_MS}
+              step={1000}
+              className="rounded border p-2"
+              defaultValue={recordsMutationTimeoutMs || MAX_RECORDS_MUTATION_TIMEOUT_MS}
+              required
+            />
+            <p className="rounded border p-2 text-sm text-slate-600">
+              {isUr
+                ? `حد: ${MIN_RECORDS_MUTATION_TIMEOUT_MS} تا ${MAX_RECORDS_MUTATION_TIMEOUT_MS} ملی سیکنڈ`
+                : `Allowed range: ${MIN_RECORDS_MUTATION_TIMEOUT_MS} to ${MAX_RECORDS_MUTATION_TIMEOUT_MS} ms`}
+            </p>
+            <button className="rounded border px-3 py-2 md:col-span-2">{isUr ? 'رن ٹائم ٹائم آؤٹ محفوظ کریں' : 'Save Runtime Timeout'}</button>
+          </form>
           <form className="card grid gap-2 md:grid-cols-2" method="post" action="/api/admin/settings/smtp">
             <CsrfInput />
             <input type="hidden" name="locale" value={params.locale} />

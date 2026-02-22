@@ -5,6 +5,8 @@ import { calculateZakat } from '@/lib/zakat';
 import { isSameOrigin } from '@/lib/security';
 import { hasValidCsrfToken } from '@/lib/csrf';
 
+export const maxDuration = 300;
+
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Invalid origin' }, { status: 403 });
 

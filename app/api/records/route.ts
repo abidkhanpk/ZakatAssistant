@@ -6,6 +6,8 @@ import { calculateZakat } from '@/lib/zakat';
 import { isSameOrigin } from '@/lib/security';
 import { hasValidCsrfToken } from '@/lib/csrf';
 
+export const maxDuration = 300;
+
 const itemSchema = z.object({
   description: z.string().min(1),
   amount: z.coerce.number().default(0),

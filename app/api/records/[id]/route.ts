@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { calculateZakat } from '@/lib/zakat';
 import { isSameOrigin } from '@/lib/security';
 import { hasValidCsrfToken } from '@/lib/csrf';
+import { getRecordMutationTimeoutMs } from '@/lib/runtime-settings';
+
+export const maxDuration = 300;
 
 const itemSchema = z.object({
   description: z.string().min(1),
@@ -60,6 +63,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const assets = payload.categories.filter((c) => c.type === 'ASSET');
   const liabilities = payload.categories.filter((c) => c.type === 'LIABILITY');
   const totals = calculateZakat({ calendarType: payload.calendarType, assets, liabilities });
+  const transactionTimeoutMs = await getRecordMutationTimeoutMs();
 
   await prisma.$transaction(async (tx) => {
     await tx.zakatRecord.update({
@@ -104,7 +108,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         });
       }
     }
-  }, { timeout: 15000 });
+  }, { timeout: transactionTimeoutMs });
 
   return NextResponse.redirect(
     new URL(`/${payload.locale}/app/records/${existing.id}?year=${encodeURIComponent(payload.yearLabel)}`, req.url),
