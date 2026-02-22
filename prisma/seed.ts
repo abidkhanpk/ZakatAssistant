@@ -1,16 +1,24 @@
 import { PrismaClient, Role } from '@prisma/client';
-import argon2 from 'argon2';
+import { randomBytes, scrypt as scryptCallback } from 'crypto';
+import { promisify } from 'util';
 import { defaultCategoryTemplates } from '../lib/default-categories';
 
 const prisma = new PrismaClient();
+const scrypt = promisify(scryptCallback);
 
 function toSeedId(name: string, type: 'ASSET' | 'LIABILITY') {
   return `default-${type.toLowerCase()}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 }
 
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
+  return `scrypt$${salt}$${derivedKey.toString('hex')}`;
+}
+
 async function main() {
   const password = 'admin123';
-  const passwordHash = await argon2.hash(password);
+  const passwordHash = await hashPassword(password);
 
   await prisma.user.upsert({
     where: { username: 'admin' },
