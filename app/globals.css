@@ -176,8 +176,8 @@ body { @apply bg-slate-50 text-slate-900; }
   right: auto;
   left: 0;
   transform: none;
-  top: 0.5rem;
-  bottom: 0.5rem;
+  top: 1px;
+  bottom: 1px;
   width: 1px;
   height: auto;
   border: 0;
