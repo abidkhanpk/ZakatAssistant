@@ -170,6 +170,20 @@ body { @apply bg-slate-50 text-slate-900; }
   box-shadow: inset -1px 0 0 #d8e0ea;
 }
 
+[dir='rtl'] .breadcrumbs li.first a::after {
+  content: '';
+  position: absolute;
+  right: auto;
+  left: 0;
+  transform: none;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 1px;
+  height: auto;
+  border: 0;
+  background: #d8e0ea;
+}
+
 [dir='rtl'] .breadcrumbs li.active a {
   border-radius: 0.55rem 0 0 0.55rem;
   padding-left: 1rem;

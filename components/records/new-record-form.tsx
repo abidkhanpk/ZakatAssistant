@@ -185,6 +185,17 @@ export function NewRecordForm({
     });
   }
 
+  function moveItem(categoryIndex: number, itemIndex: number, direction: 'UP' | 'DOWN') {
+    setCategories((prev) =>
+      prev.map((category, i) => {
+        if (i !== categoryIndex) return category;
+        const to = direction === 'UP' ? itemIndex - 1 : itemIndex + 1;
+        if (to < 0 || to >= category.items.length) return category;
+        return { ...category, items: move(category.items, itemIndex, to) };
+      })
+    );
+  }
+
   function typeLabel(type: 'ASSET' | 'LIABILITY') {
     if (type === 'ASSET') return isUr ? 'اثاثہ' : 'Asset';
     return isUr ? 'واجبات' : 'Liability';
@@ -313,6 +324,22 @@ export function NewRecordForm({
                       </td>
                       <td className="p-2">
                         <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            className="rounded border px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() => moveItem(categoryIndex, itemIndex, 'UP')}
+                            disabled={itemIndex === 0}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded border px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() => moveItem(categoryIndex, itemIndex, 'DOWN')}
+                            disabled={itemIndex === category.items.length - 1}
+                          >
+                            ↓
+                          </button>
                           <button type="button" className="rounded border px-2 py-1" onClick={() => removeItem(categoryIndex, itemIndex)}>
                             {isUr ? 'آئٹم حذف' : 'Remove item'}
                           </button>
@@ -375,7 +402,27 @@ export function NewRecordForm({
                       <tr key={`${category.id}-item-${itemIndex}`} className="border-b">
                         <td className="p-2"><input className="w-full rounded border p-2" value={item.description} onChange={(e) => updateItem(categoryIndex, itemIndex, { description: e.target.value })} placeholder={isUr ? 'تفصیل' : 'Description'} /></td>
                         <td className="p-2"><input type="number" step="0.01" className="w-full rounded border p-2" value={item.amount} onChange={(e) => updateItem(categoryIndex, itemIndex, { amount: Number(e.target.value || 0) })} placeholder={isUr ? 'رقم' : 'Amount'} /></td>
-                        <td className="p-2"><button type="button" className="rounded border px-2" onClick={() => removeItem(categoryIndex, itemIndex)}>×</button></td>
+                        <td className="p-2">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="rounded border px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                              onClick={() => moveItem(categoryIndex, itemIndex, 'UP')}
+                              disabled={itemIndex === 0}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded border px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                              onClick={() => moveItem(categoryIndex, itemIndex, 'DOWN')}
+                              disabled={itemIndex === category.items.length - 1}
+                            >
+                              ↓
+                            </button>
+                            <button type="button" className="rounded border px-2" onClick={() => removeItem(categoryIndex, itemIndex)}>×</button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
