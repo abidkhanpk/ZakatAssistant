@@ -15,7 +15,7 @@ export function LanguageSwitcher({ locale }: { locale: 'en' | 'ur' }) {
   return (
     <Link
       href={href}
-      className="rounded-full border bg-white/90 px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur"
+      className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-brand/30 hover:text-brand"
       aria-label={locale === 'en' ? 'اردو' : 'English'}
       style={{
         fontFamily:
