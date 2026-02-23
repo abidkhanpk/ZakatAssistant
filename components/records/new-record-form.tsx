@@ -39,6 +39,23 @@ function localizeDefaultDescription(description: string, isUr: boolean) {
   if (description === 'Gold') return isUr ? 'سونا' : 'Gold';
   if (description === 'Silver') return isUr ? 'چاندی' : 'Silver';
   if (description === 'Other precious items') return isUr ? 'دیگر قیمتی اشیاء' : 'Other precious items';
+  if (description === 'Foreign currency') return isUr ? 'غیر ملکی کرنسی' : 'Foreign currency';
+  if (description === 'Prize bonds') return isUr ? 'پرائز بانڈز' : 'Prize bonds';
+  if (description === 'Insurance premium') return isUr ? 'انشورنس پریمیم' : 'Insurance premium';
+  if (description === 'Hajj deposit') return isUr ? 'حج ڈپازٹ' : 'Hajj deposit';
+  if (description === 'Savings certificates') return isUr ? 'سیونگ سرٹیفکیٹس' : 'Savings certificates';
+  if (description === 'Provident fund') return isUr ? 'پراویڈنٹ فنڈ' : 'Provident fund';
+  if (description === 'Raw materials') return isUr ? 'خام مال' : 'Raw materials';
+  if (description === 'Goods sold receivable') return isUr ? 'فروخت شدہ مال کی قابل وصول رقم' : 'Goods sold receivable';
+  if (description === 'LC margin deposit') return isUr ? 'ایل سی مارجن ڈپازٹ' : 'LC margin deposit';
+  if (description === 'Payment to banks for goods') return isUr ? 'سامان کے لیے بینک کو ادائیگی' : 'Payment to banks for goods';
+  if (description === 'Investment as partner') return isUr ? 'بطور پارٹنر سرمایہ کاری' : 'Investment as partner';
+  if (description === 'Salaries payable') return isUr ? 'واجب الادا تنخواہیں' : 'Salaries payable';
+  if (description === 'Goods bought on credit') return isUr ? 'ادھار خریدا گیا سامان' : 'Goods bought on credit';
+  if (description === 'Utility bills payable') return isUr ? 'واجب الادا یوٹیلیٹی بلز' : 'Utility bills payable';
+  if (description === 'Taxes payable') return isUr ? 'واجب الادا ٹیکس' : 'Taxes payable';
+  if (description === 'Rent payable') return isUr ? 'واجب الادا کرایہ' : 'Rent payable';
+  if (description === 'Mehar payable') return isUr ? 'مہر قابل ادائیگی' : 'Mehar payable';
   return description;
 }
 
