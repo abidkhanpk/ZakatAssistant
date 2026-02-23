@@ -6,7 +6,7 @@ export default function SignupPage({ params }: { params: { locale: string } }) {
       <form className="card mx-auto max-w-md space-y-3" method="post" action="/api/auth/signup">
         <CsrfInput />
         <input type="hidden" name="locale" value={params.locale} />
-        <h1 className="text-2xl font-semibold">Create account</h1>
+        <h1 className="text-2xl font-semibold text-center">Create account</h1>
         <input className="w-full rounded border p-2" name="username" placeholder="Username" required />
         <input className="w-full rounded border p-2" name="name" placeholder="Name" required />
         <input className="w-full rounded border p-2" name="email" type="email" placeholder="Email" required />
