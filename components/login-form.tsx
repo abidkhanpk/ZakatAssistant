@@ -29,15 +29,25 @@ export function LoginForm({ locale, csrfToken, initialError }: LoginFormProps) {
 
   function triggerShake() {
     if (!formRef.current) return;
-    formRef.current.classList.remove('animate-login-shake');
+    formRef.current.style.animation = 'none';
     void formRef.current.offsetWidth;
-    formRef.current.classList.add('animate-login-shake');
+    formRef.current.style.animation = 'login-shake 420ms ease-in-out 1 both';
   }
 
   useEffect(() => {
     if (!initialError) return;
     triggerShake();
   }, [initialError]);
+
+  useEffect(() => {
+    if (!formRef.current) return;
+    const form = formRef.current;
+    const clearAnimation = () => {
+      form.style.animation = '';
+    };
+    form.addEventListener('animationend', clearAnimation);
+    return () => form.removeEventListener('animationend', clearAnimation);
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
