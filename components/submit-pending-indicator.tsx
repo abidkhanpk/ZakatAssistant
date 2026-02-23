@@ -53,6 +53,7 @@ export function SubmitPendingIndicator() {
     const handleSubmit = (event: Event) => {
       const form = event.target as HTMLFormElement | null;
       if (!form || form.dataset.submitting === 'true') return;
+      if (form.dataset.skipSubmitPending === 'true') return;
       form.dataset.submitting = 'true';
 
       form.querySelectorAll<HTMLButtonElement>('button[type="submit"], button:not([type])').forEach((button) => {

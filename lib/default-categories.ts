@@ -21,8 +21,8 @@ export const defaultCategoryTemplates: CategoryTemplate[] = [
       { description: 'Other precious items', amount: 0 }
     ]
   },
+  { type: 'ASSET', nameEn: 'Cash & bank accounts', nameUr: 'نقدی اور بینک اکاؤنٹس', items: [{ description: 'Cash', amount: 0 }] },
   { type: 'ASSET', nameEn: 'Property purchased for onward sale', nameUr: 'فروخت کے لیے خریدی گئی جائیداد', items: [{ description: 'Amount', amount: 0 }] },
-  { type: 'ASSET', nameEn: 'Cash & bank accounts', nameUr: 'نقدی اور بینک اکاؤنٹس', items: [{ description: 'Amount', amount: 0 }] },
   { type: 'ASSET', nameEn: 'Receivable loans', nameUr: 'قابل وصول قرضے', items: [{ description: 'Amount', amount: 0 }] },
   { type: 'ASSET', nameEn: 'BC deposits not yet received', nameUr: 'بی سی ڈپازٹس جو ابھی وصول نہیں ہوئے', items: [{ description: 'Amount', amount: 0 }] },
   { type: 'ASSET', nameEn: 'Foreign currency', nameUr: 'غیر ملکی کرنسی', items: [{ description: 'Amount', amount: 0 }] },

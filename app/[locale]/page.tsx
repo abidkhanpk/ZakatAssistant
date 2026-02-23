@@ -1,11 +1,18 @@
 import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { CsrfInput } from '@/components/csrf-input';
-import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { LoginForm } from '@/components/login-form';
 
-export default async function Home({ params }: { params: { locale: string } }) {
-  const isUr = params.locale === 'ur';
+export default async function Home({
+  params,
+  searchParams
+}: {
+  params: { locale: string };
+  searchParams: { error?: string };
+}) {
   const user = await getCurrentUser();
+  const hasLoginError = searchParams.error === '1';
+  const csrfToken = cookies().get('csrf_token')?.value || '';
 
   if (user) {
     redirect(`/${params.locale}/app`);
@@ -13,20 +20,7 @@ export default async function Home({ params }: { params: { locale: string } }) {
 
   return (
     <main className="p-4">
-      <form className="card mx-auto max-w-md space-y-3" method="post" action="/api/auth/login">
-        <CsrfInput />
-        <input type="hidden" name="locale" value={params.locale} />
-        <h1 className="text-2xl font-semibold text-center">{isUr ? 'زکوٰۃ اسسٹنٹ لاگ اِن' : 'Login'}</h1>
-        <input className="w-full rounded border p-2" name="identifier" placeholder={isUr ? 'ای میل یا یوزر آئی ڈی' : 'Email or User ID'} required />
-        <input className="w-full rounded border p-2" name="password" type="password" placeholder={isUr ? 'پاس ورڈ' : 'Password'} required />
-        <button className="w-full rounded bg-brand p-2 text-white">{isUr ? 'لاگ اِن' : 'Login'}</button>
-        <Link className="block text-sm text-brand" href={`/${params.locale}/forgot-password`}>
-          {isUr ? 'پاس ورڈ بھول گئے؟' : 'Forgot password?'}
-        </Link>
-        <Link className="block text-sm text-brand" href={`/${params.locale}/signup`}>
-          {isUr ? 'نیا اکاؤنٹ بنائیں' : 'Create account'}
-        </Link>
-      </form>
+      <LoginForm locale={params.locale} csrfToken={csrfToken} initialError={hasLoginError} />
     </main>
   );
 }

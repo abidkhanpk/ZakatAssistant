@@ -8,11 +8,15 @@ import { hasValidCsrfToken } from '@/lib/csrf';
 const schema = z.object({
   identifier: z.string().min(1),
   password: z.string(),
-  locale: z.string().default('en')
+  locale: z.string().default('en'),
+  responseType: z.enum(['redirect', 'json']).optional()
 });
 
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Invalid origin' }, { status: 403 });
+
+  let wantsJson = false;
+  let locale = 'en';
 
   try {
     const formData = await req.formData();
@@ -20,10 +24,18 @@ export async function POST(req: Request) {
 
     const form = Object.fromEntries(formData);
     const parsed = schema.safeParse(form);
-    const locale = parsed.success ? parsed.data.locale : 'en';
+    locale = parsed.success ? parsed.data.locale : 'en';
+    wantsJson = parsed.success ? parsed.data.responseType === 'json' : String(formData.get('responseType') || '') === 'json';
+
+    function invalidCredentialsResponse() {
+      if (wantsJson) {
+        return NextResponse.json({ ok: false, error: 'invalid_credentials' }, { status: 401 });
+      }
+      return NextResponse.redirect(new URL(`/${locale}/login?error=1`, req.url), 303);
+    }
 
     if (!parsed.success) {
-      return NextResponse.redirect(new URL(`/${locale}/login?error=1`, req.url), 303);
+      return invalidCredentialsResponse();
     }
 
     const identifier = parsed.data.identifier.trim();
@@ -33,7 +45,7 @@ export async function POST(req: Request) {
       }
     });
     if (!user || !user.emailVerifiedAt) {
-      return NextResponse.redirect(new URL(`/${locale}/login?error=1`, req.url), 303);
+      return invalidCredentialsResponse();
     }
 
     let passwordValid = false;
@@ -44,14 +56,23 @@ export async function POST(req: Request) {
     }
 
     if (!passwordValid) {
-      return NextResponse.redirect(new URL(`/${locale}/login?error=1`, req.url), 303);
+      return invalidCredentialsResponse();
     }
 
     const token = await signSession(user.id, user.role);
+    if (wantsJson) {
+      const response = NextResponse.json({ ok: true, redirectTo: `/${locale}/app` });
+      setAuthCookieOnResponse(response, token);
+      return response;
+    }
+
     const response = NextResponse.redirect(new URL(`/${locale}/app`, req.url), 303);
     setAuthCookieOnResponse(response, token);
     return response;
   } catch {
-    return NextResponse.redirect(new URL('/en/login?error=1', req.url), 303);
+    if (wantsJson) {
+      return NextResponse.json({ ok: false, error: 'invalid_credentials' }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL(`/${locale}/login?error=1`, req.url), 303);
   }
 }

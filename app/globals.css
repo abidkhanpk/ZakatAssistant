@@ -133,6 +133,57 @@ body { @apply bg-slate-50 text-slate-900; }
   color: inherit;
 }
 
+@keyframes login-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  8% {
+    transform: translateX(-14px);
+  }
+  16% {
+    transform: translateX(14px);
+  }
+  24% {
+    transform: translateX(-12px);
+  }
+  32% {
+    transform: translateX(12px);
+  }
+  40% {
+    transform: translateX(-10px);
+  }
+  48% {
+    transform: translateX(10px);
+  }
+  56% {
+    transform: translateX(-8px);
+  }
+  64% {
+    transform: translateX(8px);
+  }
+  72% {
+    transform: translateX(-6px);
+  }
+  80% {
+    transform: translateX(6px);
+  }
+  88% {
+    transform: translateX(-4px);
+  }
+  96% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-login-shake {
+  animation-name: login-shake;
+  animation-duration: 420ms;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: 1;
+  animation-fill-mode: both;
+}
+
 .breadcrumbs li.active a:hover,
 .breadcrumbs li.active a:focus-visible,
 .breadcrumbs li.first a:hover,
