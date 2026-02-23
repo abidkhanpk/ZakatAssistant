@@ -3,9 +3,9 @@ import type { Metadata } from 'next';
 import { PwaRegister } from '@/components/pwa-register';
 
 export const metadata: Metadata = {
-  title: 'ZakatAssistant',
-  description: 'Production-ready Zakat management app',
-  applicationName: 'ZakatAssistant',
+  title: 'Zakat Assistant',
+  description: 'Zakat calculation app which will keep record of your previous years calculations as well.',
+  applicationName: 'Zakat Assistant',
   manifest: '/manifest.webmanifest'
 };
 
