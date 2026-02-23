@@ -45,7 +45,7 @@ export function UserMenu({ locale, user, csrfToken }: UserMenuProps) {
         <User size={16} strokeWidth={2.2} />
       </button>
       {open ? (
-        <div className="absolute right-0 mt-2 w-56 rounded-xl border bg-white p-3 shadow-lg">
+        <div className={`absolute ${isUr ? 'left-0' : 'right-0'} mt-2 w-56 rounded-xl border bg-white p-3 shadow-lg`}>
         <p className="font-semibold">{user.name}</p>
         <p className="text-xs text-slate-500">@{user.username}</p>
         <p className="mt-1 text-xs text-slate-500">{user.role}</p>

@@ -58,7 +58,7 @@ export function NotificationMenu({
         ) : null}
       </button>
       {open ? (
-        <div className="absolute right-0 mt-2 w-72 rounded-xl border bg-white p-3 shadow-lg">
+        <div className={`absolute ${isUr ? 'left-0' : 'right-0'} mt-2 w-72 rounded-xl border bg-white p-3 shadow-lg`}>
         <p className="mb-2 text-sm font-semibold">{isUr ? 'اطلاعات' : 'Notifications'}</p>
         <div className="space-y-2 text-sm">
           {notifications.length ? (
