@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   if (url.searchParams.get('test')) {
     try {
-      await sendEmail(String(formData.to || ''), 'ZakatAssistant SMTP test', 'SMTP works');
+      await sendEmail(String(formData.to || ''), 'Zakat Assistant SMTP test', 'SMTP works');
       return NextResponse.redirect(new URL(`/${locale}/admin?tab=settings&smtpTest=ok`, req.url), 303);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'SMTP test failed';

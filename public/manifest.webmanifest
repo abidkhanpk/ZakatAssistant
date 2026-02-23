@@ -1,11 +1,11 @@
 {
-  "name": "ZakatAssistant",
-  "short_name": "ZakatAssistant",
+  "name": "Zakat Assistant",
+  "short_name": "Zakat Assistant",
   "start_url": "/en",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#0b8f5f",
-  "description": "ZakatAssistant PWA for yearly zakat records",
+  "description": "Zakat Assistant PWA for yearly zakat records",
   "icons": [
     { "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" },
     { "src": "/icons/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml" }

@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const resetLink = `${getRequestOrigin(req)}/${data.locale}/reset-password?token=${token}`;
     const body = `
       <p>Hello ${user.name || user.username},</p>
-      <p>We received a request to reset your ZakatAssistant password. Click the button below to continue.</p>
+      <p>We received a request to reset your Zakat Assistant password. Click the button below to continue.</p>
       <p><a href="${resetLink}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Reset password</a></p>
       <p>If the button does not work, copy and paste this link into your browser:</p>
       <p><a href="${resetLink}">${resetLink}</a></p>

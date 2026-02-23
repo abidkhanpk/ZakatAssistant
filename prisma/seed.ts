@@ -63,16 +63,16 @@ async function main() {
       key: 'annualReminderTemplate',
       value: {
         titleEn: 'Annual Zakat reminder',
-        bodyEn: 'It is time to review your yearly Zakat calculation in ZakatAssistant.',
+        bodyEn: 'It is time to review your yearly Zakat calculation in Zakat Assistant.',
         titleUr: 'سالانہ زکوٰۃ یاد دہانی',
-        bodyUr: 'ZakatAssistant میں اپنی سالانہ زکوٰۃ کیلکولیشن کا جائزہ لیں۔'
+        bodyUr: 'Zakat Assistant میں اپنی سالانہ زکوٰۃ کیلکولیشن کا جائزہ لیں۔'
       }
     },
     update: {}
   });
 
   console.log('-----------------------------------');
-  console.log('ZakatAssistant Seed Completed ✅');
+  console.log('Zakat Assistant Seed Completed ✅');
   console.log('Admin User Created:');
   console.log('Username: admin');
   console.log('Password: admin123');

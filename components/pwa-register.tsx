@@ -30,5 +30,5 @@ export function PwaRegister() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
   if (!deferred) return null;
-  return <button className="fixed bottom-20 right-4 rounded-full bg-brand px-4 py-2 text-white" onClick={async () => { deferred.prompt(); await deferred.userChoice; setDeferred(null); }}>Install ZakatAssistant</button>;
+  return <button className="fixed bottom-20 right-4 rounded-full bg-brand px-4 py-2 text-white" onClick={async () => { deferred.prompt(); await deferred.userChoice; setDeferred(null); }}>Install Zakat Assistant</button>;
 }

@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       const link = `${getRequestOrigin(req)}/api/auth/verify?locale=${data.locale}&token=${token}&purpose=email-change`;
       const body = `
         <p>Hello ${user.name || user.username},</p>
-        <p>We received a request to change your ZakatAssistant email address. Confirm your new email using the button below.</p>
+        <p>We received a request to change your Zakat Assistant email address. Confirm your new email using the button below.</p>
         <p><a href="${link}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Confirm email</a></p>
         <p>If the button does not work, copy and paste this link into your browser:</p>
         <p><a href="${link}">${link}</a></p>
