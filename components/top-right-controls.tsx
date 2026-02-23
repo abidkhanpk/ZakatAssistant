@@ -2,6 +2,7 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 import { UserMenu } from '@/components/user-menu';
 import { NotificationMenu } from '@/components/notification-menu';
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import packageJson from '@/package.json';
 
 type TopRightControlsProps = {
@@ -19,10 +20,10 @@ export function TopRightControls({ locale, user, notifications, unreadCount }: T
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-12 max-w-6xl items-center justify-between px-4">
-        <p className="text-sm font-semibold text-slate-800">
+        <Link href={`/${locale}`} className="text-sm font-semibold text-slate-800 hover:text-brand">
           {isUr ? 'زکوٰۃ اسسٹنٹ' : 'Zakat Assistant'}
           <sup className="ms-1 text-[10px] font-medium text-slate-500">{appVersion}</sup>
-        </p>
+        </Link>
         <div className="flex items-center gap-2">
           {user ? <NotificationMenu locale={locale} notifications={notifications} unreadCount={unreadCount} /> : null}
           {user ? <UserMenu locale={locale} user={user} csrfToken={csrfToken} /> : null}

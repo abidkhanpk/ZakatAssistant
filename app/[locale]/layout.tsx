@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { TopRightControls } from '@/components/top-right-controls';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { prisma } from '@/lib/prisma';
+import { SubmitPendingIndicator } from '@/components/submit-pending-indicator';
 
 export default async function LocaleLayout({ children, params }: { children: React.ReactNode; params: { locale: string } }) {
   const messages = await getMessages();
@@ -37,6 +38,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
       }}
     >
       <NextIntlClientProvider locale={params.locale} messages={messages}>
+        <SubmitPendingIndicator />
         <TopRightControls
           locale={isUr ? 'ur' : 'en'}
           user={
