@@ -1,4 +1,4 @@
-# ZakatAssistant
+# Zakat Assistant
 
 Next.js App Router + PostgreSQL + Prisma application for bilingual (English/Urdu) Zakat management.
 
