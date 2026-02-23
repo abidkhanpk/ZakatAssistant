@@ -38,11 +38,11 @@ export function UserMenu({ locale, user, csrfToken }: UserMenuProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border border-brand/35 bg-brand/10 text-brand shadow-sm"
+        className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-brand/35 hover:bg-brand/5 hover:text-brand"
         aria-expanded={open}
         aria-label={isUr ? 'صارف مینو' : 'User menu'}
       >
-        <User size={15} strokeWidth={2.2} />
+        <User size={16} strokeWidth={2.2} />
       </button>
       {open ? (
         <div className="absolute right-0 mt-2 w-56 rounded-xl border bg-white p-3 shadow-lg">

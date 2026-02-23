@@ -46,11 +46,11 @@ export function NotificationMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border border-brand/35 bg-brand/10 text-brand shadow-sm"
+        className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-brand/35 hover:bg-brand/5 hover:text-brand"
         aria-label={isUr ? 'اطلاعات' : 'Notifications'}
         aria-expanded={open}
       >
-        <Bell size={15} strokeWidth={2.2} />
+        <Bell size={16} strokeWidth={2.2} />
         {unreadCount > 0 ? (
           <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-red-600 px-1 text-center text-[10px] text-white">
             {unreadCount}
