@@ -27,6 +27,18 @@ export const defaultCategoryTemplates: CategoryTemplate[] = [
   { type: 'ASSET', nameEn: 'BC deposits not yet received', nameUr: 'بی سی ڈپازٹس جو ابھی وصول نہیں ہوئے', items: [{ description: 'Amount', amount: 0 }] },
   {
     type: 'ASSET',
+    nameEn: 'Business/Investment',
+    nameUr: 'کاروبار/سرمایہ کاری',
+    items: [
+      { description: 'Raw materials', amount: 0 },
+      { description: 'Goods sold receivable', amount: 0 },
+      { description: 'LC margin deposit', amount: 0 },
+      { description: 'Payment to banks for goods', amount: 0 },
+      { description: 'Investment as partner', amount: 0 }
+    ]
+  },
+  {
+    type: 'ASSET',
     nameEn: 'Miscellaneous',
     nameUr: 'متفرق',
     items: [
@@ -36,18 +48,6 @@ export const defaultCategoryTemplates: CategoryTemplate[] = [
       { description: 'Hajj deposit', amount: 0 },
       { description: 'Savings certificates', amount: 0 },
       { description: 'Provident fund', amount: 0 }
-    ]
-  },
-  {
-    type: 'ASSET',
-    nameEn: 'Business/Investment',
-    nameUr: 'کاروبار/سرمایہ کاری',
-    items: [
-      { description: 'Raw materials', amount: 0 },
-      { description: 'Goods sold receivable', amount: 0 },
-      { description: 'LC margin deposit', amount: 0 },
-      { description: 'Payment to banks for goods', amount: 0 },
-      { description: 'Investment as partner', amount: 0 }
     ]
   },
   { type: 'LIABILITY', nameEn: 'Payable loans', nameUr: 'واجب الادا قرضے', items: [{ description: 'Amount', amount: 0 }] },
@@ -69,8 +69,8 @@ export const defaultCategoryTemplates: CategoryTemplate[] = [
       { description: 'Utility bills payable', amount: 0 },
       { description: 'Taxes payable', amount: 0 },
       { description: 'Rent payable', amount: 0 },
-      { description: 'Mehar payable', amount: 0 }
+      { description: 'Mehar payable', amount: 0 },
+      { description: 'Other liabilities', amount: 0 }
     ]
-  },
-  { type: 'LIABILITY', nameEn: 'Other liabilities', nameUr: 'دیگر واجبات', items: [{ description: 'Amount', amount: 0 }] }
+  }
 ];

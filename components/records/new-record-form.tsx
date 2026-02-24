@@ -56,6 +56,7 @@ function localizeDefaultDescription(description: string, isUr: boolean) {
   if (description === 'Taxes payable') return isUr ? 'واجب الادا ٹیکس' : 'Taxes payable';
   if (description === 'Rent payable') return isUr ? 'واجب الادا کرایہ' : 'Rent payable';
   if (description === 'Mehar payable') return isUr ? 'مہر قابل ادائیگی' : 'Mehar payable';
+  if (description === 'Other liabilities') return isUr ? 'دیگر واجبات' : 'Other liabilities';
   return description;
 }
 
