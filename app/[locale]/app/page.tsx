@@ -26,7 +26,14 @@ export default async function AppHome({ params }: { params: { locale: string } }
     totalDeductions: Number(record.totalDeductions),
     netZakatable: Number(record.netZakatable),
     zakatPayable: Number(record.zakatPayable)
-  }));
+  })).sort((a, b) => {
+    const aNum = Number(a.yearLabel);
+    const bNum = Number(b.yearLabel);
+    if (Number.isFinite(aNum) && Number.isFinite(bNum)) return aNum - bNum;
+    if (Number.isFinite(aNum)) return -1;
+    if (Number.isFinite(bNum)) return 1;
+    return a.yearLabel.localeCompare(b.yearLabel);
+  });
 
   return (
     <main className="space-y-4 p-4">

@@ -8,6 +8,17 @@
 body { @apply bg-slate-50 text-slate-900; }
 .card { @apply rounded-2xl border bg-white p-4 shadow-sm; }
 
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;

@@ -12,16 +12,24 @@ export default async function RecordsPage({ params }: { params: { locale: string
 
   const records = await prisma.zakatRecord.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
   type RecordRow = (typeof records)[number];
+  const recordsByYear = [...records].sort((a: RecordRow, b: RecordRow) => {
+    const aNum = Number(a.yearLabel);
+    const bNum = Number(b.yearLabel);
+    if (Number.isFinite(aNum) && Number.isFinite(bNum)) return bNum - aNum;
+    if (Number.isFinite(aNum)) return -1;
+    if (Number.isFinite(bNum)) return 1;
+    return b.yearLabel.localeCompare(a.yearLabel);
+  });
   const currentYear = new Date().getFullYear();
-  const exactPreviousYearRecord = records.find((record: RecordRow) => Number(record.yearLabel) === currentYear - 1);
+  const exactPreviousYearRecord = recordsByYear.find((record: RecordRow) => Number(record.yearLabel) === currentYear - 1);
   const previousYearRecord =
     exactPreviousYearRecord ||
-    [...records]
+    [...recordsByYear]
       .filter((record: RecordRow) => {
         const n = Number(record.yearLabel);
         return Number.isFinite(n) && n < currentYear;
       })
-      .sort((a: RecordRow, b: RecordRow) => Number(b.yearLabel) - Number(a.yearLabel))[0] || records[0] || null;
+      .sort((a: RecordRow, b: RecordRow) => Number(b.yearLabel) - Number(a.yearLabel))[0] || recordsByYear[0] || null;
 
   const formatter = new Intl.NumberFormat(params.locale === 'ur' ? 'ur-PK' : 'en-US', {
     minimumFractionDigits: 2,
@@ -49,7 +57,7 @@ export default async function RecordsPage({ params }: { params: { locale: string
             </tr>
           </thead>
           <tbody>
-            {records.map((record: RecordRow) => (
+            {recordsByYear.map((record: RecordRow) => (
               <tr key={record.id} className="border-b hover:bg-slate-50">
                 <td className="p-2">
                   <Link className="text-brand underline" href={`/${params.locale}/app/records/${record.id}?year=${encodeURIComponent(record.yearLabel)}`}>

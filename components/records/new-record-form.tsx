@@ -121,6 +121,19 @@ export function NewRecordForm({
   });
 
   const categorySteps = useMemo(() => categories.map((category) => category.id), [categories]);
+  const yearOptions = useMemo(() => {
+    const thisYear = new Date().getFullYear();
+    const options = Array.from({ length: 16 }, (_, index) => String(thisYear - index));
+    if (yearLabel && !options.includes(yearLabel)) {
+      options.push(yearLabel);
+    }
+    return options.sort((a, b) => {
+      const aNum = Number(a);
+      const bNum = Number(b);
+      if (Number.isFinite(aNum) && Number.isFinite(bNum)) return bNum - aNum;
+      return b.localeCompare(a);
+    });
+  }, [yearLabel]);
   const visibleCategories = useMemo(() => {
     if (mode === 'ADVANCED') return categories;
     const currentId = categorySteps[wizardStep];
@@ -256,7 +269,16 @@ export function NewRecordForm({
         />
 
         <div className="card grid gap-3 md:grid-cols-4">
-          <div><label className="text-sm font-medium">{isUr ? 'سال' : 'Year'}</label><input className="mt-1 w-full rounded border p-2" value={yearLabel} onChange={(e) => setYearLabel(e.target.value)} /></div>
+          <div>
+            <label className="text-sm font-medium">{isUr ? 'سال' : 'Year'}</label>
+            <select className="mt-1 w-full rounded border p-2" value={yearLabel} onChange={(e) => setYearLabel(e.target.value)}>
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="text-sm font-medium">{isUr ? 'کیلنڈر' : 'Calendar'}</label>
             <select className="mt-1 w-full rounded border p-2" value={calendarType} onChange={(e) => setCalendarType(e.target.value as 'ISLAMIC' | 'GREGORIAN')}>
