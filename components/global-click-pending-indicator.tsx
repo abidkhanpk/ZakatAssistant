@@ -49,7 +49,7 @@ export function GlobalClickPendingIndicator() {
         return;
       }
 
-      const link = target.closest('a[href]');
+      const link = target.closest('a[href]') as HTMLAnchorElement | null;
       if (!link) return;
       if (link.target === '_blank' || link.hasAttribute('download')) return;
 
