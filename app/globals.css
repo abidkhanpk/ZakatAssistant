@@ -184,6 +184,12 @@ body { @apply bg-slate-50 text-slate-900; }
   animation-fill-mode: both;
 }
 
+.ui-click-pending {
+  opacity: 0.65;
+  pointer-events: none;
+  cursor: wait;
+}
+
 .breadcrumbs li.active a:hover,
 .breadcrumbs li.active a:focus-visible,
 .breadcrumbs li.first a:hover,
