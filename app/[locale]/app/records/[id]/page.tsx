@@ -16,7 +16,7 @@ export default async function RecordDetails({
 
   const record = await prisma.zakatRecord.findFirst({
     where: { id: params.id, userId: user.id },
-    include: { categories: { include: { items: true }, orderBy: { sortOrder: 'asc' } } }
+    include: { categories: { include: { items: { orderBy: { sortOrder: 'asc' } } }, orderBy: { sortOrder: 'asc' } } }
   });
 
   if (!record) return <main className="p-4">{params.locale === 'ur' ? 'نہیں ملا' : 'Not found'}</main>;

@@ -22,7 +22,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const existing = await prisma.zakatRecord.findFirst({
     where: { id: params.id, userId: user.id },
-    include: { categories: { include: { items: true }, orderBy: { sortOrder: 'asc' } } }
+    include: { categories: { include: { items: { orderBy: { sortOrder: 'asc' } } }, orderBy: { sortOrder: 'asc' } } }
   });
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

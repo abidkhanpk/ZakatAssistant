@@ -24,7 +24,7 @@ export default async function NewRecordPage({
   const sourceRecord = sourceRecordId
     ? await prisma.zakatRecord.findFirst({
         where: { id: sourceRecordId, userId: user.id },
-        include: { categories: { include: { items: true }, orderBy: { sortOrder: 'asc' } } }
+        include: { categories: { include: { items: { orderBy: { sortOrder: 'asc' } } }, orderBy: { sortOrder: 'asc' } } }
       })
     : null;
   type SourceRecord = NonNullable<typeof sourceRecord>;
