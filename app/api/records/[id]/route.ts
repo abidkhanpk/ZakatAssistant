@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -6,6 +7,7 @@ import { calculateZakat } from '@/lib/zakat';
 import { isSameOrigin } from '@/lib/security';
 import { hasValidCsrfToken } from '@/lib/csrf';
 import { getRecordMutationTimeoutMs } from '@/lib/runtime-settings';
+import { ensureCategoryStableId, ensureItemStableId } from '@/lib/stable-layout-ids';
 
 export const maxDuration = 300;
 
@@ -87,6 +89,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     });
 
     for (const [index, cat] of payload.categories.entries()) {
+      const categoryStableId = ensureCategoryStableId(cat, index);
       const category = await tx.category.create({
         data: {
           recordId: existing.id,
@@ -94,7 +97,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           nameEn: cat.nameEn,
           nameUr: cat.nameUr,
           sortOrder: index,
-        stableId: cat.stableId
+          stableId: categoryStableId
         }
       });
 
@@ -107,12 +110,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             unitPrice: item.unitPrice,
             amount: item.amount,
             sortOrder: itemIndex,
-          stableId: item.stableId
+            stableId: ensureItemStableId(item, categoryStableId, itemIndex)
           }
         });
       }
     }
   }, { timeout: transactionTimeoutMs });
+
+  revalidatePath(`/${payload.locale}/app/records`);
+  revalidatePath(`/${payload.locale}/app/records/${existing.id}`);
+  revalidatePath(`/${payload.locale}/app/records/new`);
+
+  if (intent === 'save') {
+    return NextResponse.json({ ok: true, recordId: existing.id });
+  }
 
   return NextResponse.redirect(
     new URL(`/${payload.locale}/app/records/${existing.id}?year=${encodeURIComponent(payload.yearLabel)}`, req.url),

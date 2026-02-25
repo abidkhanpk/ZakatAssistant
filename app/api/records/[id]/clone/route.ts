@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { calculateZakat } from '@/lib/zakat';
 import { isSameOrigin } from '@/lib/security';
 import { hasValidCsrfToken } from '@/lib/csrf';
+import { ensureCategoryStableId, ensureItemStableId } from '@/lib/stable-layout-ids';
 
 export const maxDuration = 300;
 
@@ -52,7 +53,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
   });
 
-  for (const category of existing.categories) {
+  for (const [categoryIndex, category] of existing.categories.entries()) {
+    const categoryStableId = ensureCategoryStableId(category, categoryIndex);
     const createdCategory = await prisma.category.create({
       data: {
         recordId: clone.id,
@@ -60,11 +62,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         nameEn: category.nameEn,
         nameUr: category.nameUr,
         sortOrder: category.sortOrder,
-        stableId: category.stableId
+        stableId: categoryStableId
       }
     });
 
-    for (const item of category.items) {
+    for (const [itemIndex, item] of category.items.entries()) {
       await prisma.lineItem.create({
         data: {
           categoryId: createdCategory.id,
@@ -73,7 +75,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           unitPrice: item.unitPrice,
           amount: item.amount,
           sortOrder: item.sortOrder,
-          stableId: item.stableId
+          stableId: ensureItemStableId(item, categoryStableId, itemIndex)
         }
       });
     }

@@ -83,10 +83,11 @@ export default async function NewRecordPage({
   return (
     <NewRecordForm
       locale={params.locale}
+      currentUserId={user.id}
       csrfToken={csrfToken}
       initialData={initialData}
       formAction={editRecordId ? `/api/records/${editRecordId}` : '/api/records'}
-      submitLabel={editRecordId ? (params.locale === 'ur' ? 'ریکارڈ اپ ڈیٹ کریں' : 'Update record') : undefined}
+      submitLabel={editRecordId ? (params.locale === 'ur' ? 'بند کریں' : 'Close') : undefined}
       promptImportFromId={promptImportFromId}
     />
   );

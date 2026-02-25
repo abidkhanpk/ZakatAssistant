@@ -72,7 +72,8 @@ export default async function RecordsPage({ params }: { params: { locale: string
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       className="inline-flex rounded bg-brand px-2 py-1 text-xs font-medium text-white"
-                      href={`/${params.locale}/app/records/new?editRecordId=${record.id}&editYear=${encodeURIComponent(record.yearLabel)}`}
+                      prefetch={false}
+                      href={`/${params.locale}/app/records/new?editRecordId=${record.id}&editYear=${encodeURIComponent(record.yearLabel)}&rev=${record.updatedAt.getTime()}`}
                     >
                       {isUr ? 'ترمیم' : 'Edit'}
                     </Link>

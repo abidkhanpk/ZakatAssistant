@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { calculateZakat } from '@/lib/zakat';
 import { isSameOrigin } from '@/lib/security';
 import { hasValidCsrfToken } from '@/lib/csrf';
+import { ensureCategoryStableId, ensureItemStableId } from '@/lib/stable-layout-ids';
 
 export const maxDuration = 300;
 
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
   });
 
   for (const [index, cat] of payload.categories.entries()) {
+    const categoryStableId = ensureCategoryStableId(cat, index);
     const category = await prisma.category.create({
       data: {
         recordId: record.id,
@@ -74,7 +76,7 @@ export async function POST(req: Request) {
         nameEn: cat.nameEn,
         nameUr: cat.nameUr,
         sortOrder: index,
-        stableId: cat.stableId
+        stableId: categoryStableId
       }
     });
 
@@ -87,7 +89,7 @@ export async function POST(req: Request) {
           unitPrice: item.unitPrice,
           amount: item.amount,
           sortOrder: itemIndex,
-          stableId: item.stableId
+          stableId: ensureItemStableId(item, categoryStableId, itemIndex)
         }
       });
     }

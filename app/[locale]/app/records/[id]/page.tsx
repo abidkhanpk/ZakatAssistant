@@ -51,7 +51,8 @@ export default async function RecordDetails({
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Link
             className="inline-block rounded bg-brand px-3 py-2 text-white"
-            href={`/${params.locale}/app/records/new?editRecordId=${record.id}&editYear=${encodeURIComponent(record.yearLabel)}`}
+            prefetch={false}
+            href={`/${params.locale}/app/records/new?editRecordId=${record.id}&editYear=${encodeURIComponent(record.yearLabel)}&rev=${record.updatedAt.getTime()}`}
           >
             {isUr ? 'ریکارڈ میں ترمیم کریں' : 'Edit record'}
           </Link>

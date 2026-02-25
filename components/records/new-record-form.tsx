@@ -1,8 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
-import { defaultCategoryTemplates, type CategoryTemplate } from '@/lib/default-categories';
+import { useEffect, useMemo, useState, type WheelEvent } from 'react';
+import {
+  defaultCategoryTemplates,
+  findTemplateCategoryByNames,
+  findTemplateItemByDescription,
+  getTemplateItem,
+  type CategoryTemplate
+} from '@/lib/default-categories';
 import { useRouter } from 'next/navigation';
 
 type Item = {
@@ -69,6 +75,46 @@ function localizeDefaultDescription(description: string, isUr: boolean) {
   return description;
 }
 
+function normalizeDescription(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function resolveTemplateCategoryKey(category: {
+  stableId?: string;
+  nameEn: string;
+  nameUr: string;
+  type: 'ASSET' | 'LIABILITY';
+}) {
+  if (category.stableId && defaultCategoryTemplates.some((template) => template.key === category.stableId)) {
+    return category.stableId;
+  }
+  return findTemplateCategoryByNames(category.type, category.nameEn, category.nameUr)?.key;
+}
+
+function localizeSeededItemDescription(
+  item: { stableId?: string; description: string },
+  category: { stableId?: string; nameEn: string; nameUr: string; type: 'ASSET' | 'LIABILITY' },
+  isUr: boolean
+) {
+  const templateItem =
+    (item.stableId ? getTemplateItem(item.stableId)?.item : undefined) ||
+    (() => {
+      const templateCategoryKey = resolveTemplateCategoryKey(category);
+      if (!templateCategoryKey) return undefined;
+      return findTemplateItemByDescription(templateCategoryKey, item.description);
+    })();
+  if (!templateItem) return item.description;
+
+  const candidates = new Set(
+    [templateItem.description, ...(templateItem.legacyDescriptions || []), localizeDefaultDescription(templateItem.description, false), localizeDefaultDescription(templateItem.description, true)].map(
+      normalizeDescription
+    )
+  );
+
+  if (!candidates.has(normalizeDescription(item.description))) return item.description;
+  return localizeDefaultDescription(templateItem.description, isUr);
+}
+
 function toCategory(template: CategoryTemplate, idx: number, isUr: boolean): Category {
   return {
     id: `cat-${idx}-${template.type}`,
@@ -106,6 +152,7 @@ function createCustomStableId(prefix: 'cat' | 'item') {
 
 export function NewRecordForm({
   locale,
+  currentUserId,
   csrfToken,
   initialData,
   formAction,
@@ -113,6 +160,7 @@ export function NewRecordForm({
   promptImportFromId
 }: {
   locale: string;
+  currentUserId: string;
   csrfToken: string;
   initialData?: RecordFormInitialData;
   formAction?: string;
@@ -124,8 +172,12 @@ export function NewRecordForm({
   const [showImportPrompt, setShowImportPrompt] = useState(Boolean(promptImportFromId));
   const [mode, setMode] = useState<'WIZARD' | 'ADVANCED'>('WIZARD');
   const [wizardStep, setWizardStep] = useState(0);
+  const [showClosePrompt, setShowClosePrompt] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [yearLabel, setYearLabel] = useState(initialData?.yearLabel || String(new Date().getFullYear()));
   const [calendarType, setCalendarType] = useState<'ISLAMIC' | 'GREGORIAN'>(initialData?.calendarType || 'ISLAMIC');
+  const [saveWhenChangingSection, setSaveWhenChangingSection] = useState(true);
   const [categories, setCategories] = useState<Category[]>(() => {
     if (initialData?.categories?.length) {
       return initialData.categories.map((category, idx) => ({
@@ -134,7 +186,14 @@ export function NewRecordForm({
         nameEn: category.nameEn,
         nameUr: category.nameUr,
         type: category.type,
-        items: category.items.map((item) => ({ ...item, stableId: item.stableId || createCustomStableId('item') })),
+        items: category.items.map((item) => {
+          const stableId = item.stableId || createCustomStableId('item');
+          return {
+            ...item,
+            stableId,
+            description: localizeSeededItemDescription(item, category, isUr)
+          };
+        }),
         collapsed: false,
         isCustom: isCustomCategoryName(category.nameEn, category.nameUr)
       }));
@@ -161,6 +220,22 @@ export function NewRecordForm({
     const currentId = categorySteps[wizardStep];
     return categories.filter((category) => category.id === currentId);
   }, [categories, mode, categorySteps, wizardStep]);
+  const isEditMode = Boolean(initialData?.recordId && formAction);
+  const savePreferenceKey = `za-save-on-section-change:${currentUserId}`;
+  const payloadJson = JSON.stringify({
+    locale,
+    yearLabel,
+    calendarType,
+    categories: categories.map((category) => ({
+      stableId: category.stableId,
+      nameEn: category.nameEn,
+      nameUr: category.nameUr,
+      type: category.type,
+      items: category.items.map((item) => ({ stableId: item.stableId, description: item.description, amount: item.amount }))
+    }))
+  });
+  const [lastSavedPayloadJson, setLastSavedPayloadJson] = useState(payloadJson);
+  const hasUnsavedChanges = payloadJson !== lastSavedPayloadJson;
 
   const totals = useMemo(() => {
     const totalAssets = categories.filter((c) => c.type === 'ASSET').flatMap((c) => c.items).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -263,6 +338,96 @@ export function NewRecordForm({
     return isUr ? 'واجبات' : 'Liability';
   }
 
+  async function persistRecord(stayOnPage: boolean) {
+    if (!isEditMode || !formAction || isSaving) return false;
+    setIsSaving(true);
+    setSaveFeedback(null);
+    try {
+      const body = new FormData();
+      body.set('csrfToken', csrfToken);
+      body.set('locale', locale);
+      body.set('intent', stayOnPage ? 'save' : 'update');
+      body.set('payload', payloadJson);
+
+      const response = await fetch(formAction, { method: 'POST', body });
+      if (!response.ok) throw new Error(`Save failed (${response.status})`);
+
+      if (stayOnPage) {
+        setLastSavedPayloadJson(payloadJson);
+        setSaveFeedback(isUr ? 'تبدیلیاں محفوظ ہو گئیں۔' : 'Changes saved.');
+      }
+      return true;
+    } catch {
+      setSaveFeedback(isUr ? 'محفوظ نہیں ہو سکا، دوبارہ کوشش کریں۔' : 'Could not save. Please try again.');
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleManualSave() {
+    await persistRecord(true);
+  }
+
+  async function handleCloseAction() {
+    if (!isEditMode || !initialData?.recordId) return;
+    if (!hasUnsavedChanges) {
+      router.push(`/${locale}/app/records/${initialData.recordId}?year=${encodeURIComponent(yearLabel)}`);
+      return;
+    }
+    setShowClosePrompt(true);
+  }
+
+  async function handleSaveAndClose() {
+    if (!isEditMode || !initialData?.recordId) return;
+    const ok = await persistRecord(true);
+    if (!ok) return;
+    setShowClosePrompt(false);
+    router.push(`/${locale}/app/records/${initialData.recordId}?year=${encodeURIComponent(yearLabel)}`);
+  }
+
+  function handleDiscardAndClose() {
+    if (!isEditMode || !initialData?.recordId) return;
+    setShowClosePrompt(false);
+    router.push(`/${locale}/app/records/${initialData.recordId}?year=${encodeURIComponent(yearLabel)}`);
+  }
+
+  async function handleStepNavigation(direction: 'PREV' | 'NEXT') {
+    const nextStep = direction === 'PREV' ? Math.max(0, wizardStep - 1) : Math.min(categorySteps.length - 1, wizardStep + 1);
+    if (nextStep === wizardStep) return;
+
+    if (saveWhenChangingSection && isEditMode && hasUnsavedChanges) {
+      const ok = await persistRecord(true);
+      if (!ok) return;
+    }
+    setWizardStep(nextStep);
+  }
+
+  function preventWheelChange(e: WheelEvent<HTMLInputElement>) {
+    e.preventDefault();
+    e.currentTarget.blur();
+  }
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    try {
+      const saved = localStorage.getItem(savePreferenceKey);
+      if (saved === '0') setSaveWhenChangingSection(false);
+      if (saved === '1') setSaveWhenChangingSection(true);
+    } catch {
+      // ignore storage access issues
+    }
+  }, [isEditMode, savePreferenceKey]);
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    try {
+      localStorage.setItem(savePreferenceKey, saveWhenChangingSection ? '1' : '0');
+    } catch {
+      // ignore storage access issues
+    }
+  }, [isEditMode, savePreferenceKey, saveWhenChangingSection]);
+
   return (
     <main className="mx-auto max-w-5xl space-y-4 p-4">
       {showImportPrompt ? (
@@ -288,26 +453,32 @@ export function NewRecordForm({
           </div>
         </div>
       ) : null}
+      {showClosePrompt ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border bg-white p-5 shadow-xl">
+            <h3 className="text-lg font-semibold">{isUr ? 'تبدیلیاں محفوظ کریں؟' : 'Save changes?'}</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              {isUr ? 'آپ کے پاس غیر محفوظ تبدیلیاں ہیں۔' : 'You have unsaved changes.'}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button className="rounded bg-brand px-3 py-2 text-white disabled:opacity-60" onClick={handleSaveAndClose} disabled={isSaving}>
+                {isUr ? 'محفوظ کریں اور بند کریں' : 'Save and close'}
+              </button>
+              <button className="rounded border px-3 py-2" onClick={handleDiscardAndClose}>
+                {isUr ? 'تبدیلیاں چھوڑیں' : 'Discard'}
+              </button>
+              <button className="rounded border px-3 py-2" onClick={() => setShowClosePrompt(false)}>
+                {isUr ? 'منسوخ' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <motion.form initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} method="post" action={formAction || '/api/records'} className="space-y-4">
         <input type="hidden" name="csrfToken" value={csrfToken} />
         <input type="hidden" name="locale" value={locale} />
-        <input
-          type="hidden"
-          name="payload"
-          value={JSON.stringify({
-            locale,
-            yearLabel,
-            calendarType,
-            categories: categories.map((category) => ({
-              stableId: category.stableId,
-              nameEn: category.nameEn,
-              nameUr: category.nameUr,
-              type: category.type,
-              items: category.items.map((item) => ({ stableId: item.stableId, description: item.description, amount: item.amount }))
-            }))
-          })}
-        />
+        <input type="hidden" name="payload" value={payloadJson} />
 
         <div className="card grid gap-3 md:grid-cols-4">
           <div>
@@ -340,13 +511,42 @@ export function NewRecordForm({
           <div><p className="text-slate-500">{isUr ? 'شرح' : 'Rate'}</p><p className="font-semibold">{(totals.rate * 100).toFixed(2)}%</p></div>
           <div><p className="text-slate-500">{isUr ? 'زکوٰۃ قابلِ ادا' : 'Zakat Payable'}</p><p className="font-semibold">{totals.zakatPayable.toFixed(2)}</p></div>
         </div>
+        {saveFeedback ? (
+          <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{saveFeedback}</div>
+        ) : null}
 
         {mode === 'WIZARD' ? (
           <div className="rounded-xl border border-brand/30 bg-brand/10 px-4 py-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <button type="button" className="rounded border border-brand/40 bg-white px-3 py-1 font-medium text-brand hover:bg-brand/5" onClick={() => setWizardStep((s) => Math.max(0, s - 1))}>{isUr ? 'پچھلا' : 'Previous'}</button>
-              <span className="font-semibold text-brand">{isUr ? 'مرحلہ' : 'Step'} {wizardStep + 1} / {Math.max(categorySteps.length, 1)}</span>
-              <button type="button" className="rounded border border-brand/40 bg-white px-3 py-1 font-medium text-brand hover:bg-brand/5" onClick={() => setWizardStep((s) => Math.min(categorySteps.length - 1, s + 1))}>{isUr ? 'اگلا' : 'Next'}</button>
+            <div className="grid grid-cols-2 items-center gap-3 md:grid-cols-3">
+              <button
+                type="button"
+                className="justify-self-start rounded border border-brand/40 bg-white px-3 py-1 font-medium text-brand hover:bg-brand/5 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => handleStepNavigation('PREV')}
+                disabled={isSaving}
+              >
+                {isUr ? 'پچھلا' : 'Previous'}
+              </button>
+              <span className="justify-self-center font-semibold text-brand md:col-start-2">{isUr ? 'مرحلہ' : 'Step'} {wizardStep + 1} / {Math.max(categorySteps.length, 1)}</span>
+              <div className="col-span-2 flex items-center justify-end gap-3 md:col-span-1">
+                {isEditMode ? (
+                  <label className="flex items-center gap-2 text-xs text-slate-700 md:text-sm">
+                    <span>{isUr ? 'سیکشن تبدیل کرتے وقت محفوظ کریں' : 'Save when changing section'}</span>
+                    <input
+                      type="checkbox"
+                      checked={saveWhenChangingSection}
+                      onChange={(e) => setSaveWhenChangingSection(e.target.checked)}
+                    />
+                  </label>
+                ) : null}
+                <button
+                  type="button"
+                  className="rounded border border-brand/40 bg-white px-3 py-1 font-medium text-brand hover:bg-brand/5 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => handleStepNavigation('NEXT')}
+                  disabled={isSaving}
+                >
+                  {isUr ? 'اگلا' : 'Next'}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -400,6 +600,7 @@ export function NewRecordForm({
                           step="0.01"
                           className="w-full rounded border p-2"
                           value={item.amount}
+                          onWheel={preventWheelChange}
                           onChange={(e) => updateItem(categoryIndex, itemIndex, { amount: Number(e.target.value || 0) })}
                           placeholder={isUr ? 'رقم' : 'Amount'}
                         />
@@ -483,7 +684,7 @@ export function NewRecordForm({
                     {category.items.map((item, itemIndex) => (
                       <tr key={`${category.id}-item-${itemIndex}`} className="border-b">
                         <td className="p-2"><input className="w-full rounded border p-2" value={item.description} onChange={(e) => updateItem(categoryIndex, itemIndex, { description: e.target.value })} placeholder={isUr ? 'تفصیل' : 'Description'} /></td>
-                        <td className="p-2"><input type="number" step="0.01" className="w-full rounded border p-2" value={item.amount} onChange={(e) => updateItem(categoryIndex, itemIndex, { amount: Number(e.target.value || 0) })} placeholder={isUr ? 'رقم' : 'Amount'} /></td>
+                        <td className="p-2"><input type="number" step="0.01" className="w-full rounded border p-2" value={item.amount} onWheel={preventWheelChange} onChange={(e) => updateItem(categoryIndex, itemIndex, { amount: Number(e.target.value || 0) })} placeholder={isUr ? 'رقم' : 'Amount'} /></td>
                         <td className="p-2">
                           <div className="flex flex-wrap gap-2">
                             <button
@@ -519,7 +720,18 @@ export function NewRecordForm({
         <div className="sticky bottom-0 flex flex-wrap gap-2 bg-slate-50/95 py-3 backdrop-blur">
           <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('ASSET')}>{isUr ? 'اثاثہ زمرہ شامل کریں' : 'Add asset category'}</button>
           <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('LIABILITY')}>{isUr ? 'واجبات زمرہ شامل کریں' : 'Add liability category'}</button>
-          <button className="rounded bg-brand px-4 py-2 text-white">{submitLabel || (isUr ? 'ریکارڈ محفوظ کریں' : 'Save record')}</button>
+          {isEditMode ? (
+            <>
+              <button type="button" className="h-10 rounded border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleManualSave} disabled={isSaving}>
+                {isSaving ? (isUr ? 'محفوظ ہو رہا ہے...' : 'Saving...') : isUr ? 'محفوظ کریں' : 'Save'}
+              </button>
+              <button type="button" className="h-10 rounded bg-brand px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCloseAction} disabled={isSaving}>
+                {submitLabel || (isUr ? 'بند کریں' : 'Close')}
+              </button>
+            </>
+          ) : (
+            <button className="rounded bg-brand px-4 py-2 text-white">{submitLabel || (isUr ? 'ریکارڈ محفوظ کریں' : 'Save record')}</button>
+          )}
         </div>
       </motion.form>
     </main>
