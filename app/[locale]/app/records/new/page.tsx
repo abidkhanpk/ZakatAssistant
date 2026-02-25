@@ -3,6 +3,7 @@ import { NewRecordForm } from '@/components/records/new-record-form';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { remapImportedCategoriesToCurrentLayout } from '@/lib/record-layout';
 
 export default async function NewRecordPage({
   params,
@@ -33,15 +34,31 @@ export default async function NewRecordPage({
         recordId: editRecordId ? sourceRecord.id : undefined,
         yearLabel: editRecordId ? sourceRecord.yearLabel : String(new Date().getFullYear()),
         calendarType: sourceRecord.calendarType,
-        categories: sourceRecord.categories.map((category: SourceRecord['categories'][number]) => ({
-          nameEn: category.nameEn,
-          nameUr: category.nameUr,
-          type: category.type,
-          items: category.items.map((item: SourceRecord['categories'][number]['items'][number]) => ({
-            description: item.description,
-            amount: Number(item.amount)
-          }))
-        }))
+        categories: (editRecordId
+          ? sourceRecord.categories.map((category: SourceRecord['categories'][number]) => ({
+              nameEn: category.nameEn,
+              nameUr: category.nameUr,
+              type: category.type,
+              stableId: category.stableId || undefined,
+              items: category.items.map((item: SourceRecord['categories'][number]['items'][number]) => ({
+                stableId: item.stableId || undefined,
+                description: item.description,
+                amount: Number(item.amount)
+              }))
+            }))
+          : remapImportedCategoriesToCurrentLayout(
+              sourceRecord.categories.map((category: SourceRecord['categories'][number]) => ({
+                nameEn: category.nameEn,
+                nameUr: category.nameUr,
+                type: category.type,
+                stableId: category.stableId || undefined,
+                items: category.items.map((item: SourceRecord['categories'][number]['items'][number]) => ({
+                  stableId: item.stableId || undefined,
+                  description: item.description,
+                  amount: Number(item.amount)
+                }))
+              }))
+            ))
       }
     : undefined;
 

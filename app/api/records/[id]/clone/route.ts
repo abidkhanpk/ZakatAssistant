@@ -59,7 +59,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         type: category.type,
         nameEn: category.nameEn,
         nameUr: category.nameUr,
-        sortOrder: category.sortOrder
+        sortOrder: category.sortOrder,
+        stableId: category.stableId
       }
     });
 
@@ -71,7 +72,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           amount: item.amount,
-          sortOrder: item.sortOrder
+          sortOrder: item.sortOrder,
+          stableId: item.stableId
         }
       });
     }
