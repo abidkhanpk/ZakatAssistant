@@ -10,6 +10,7 @@ import { getRecordMutationTimeoutMs } from '@/lib/runtime-settings';
 export const maxDuration = 300;
 
 const itemSchema = z.object({
+  stableId: z.string().min(1).optional(),
   description: z.string().min(1),
   amount: z.coerce.number().default(0),
   quantity: z.coerce.number().optional(),
@@ -17,6 +18,7 @@ const itemSchema = z.object({
 });
 
 const categorySchema = z.object({
+  stableId: z.string().min(1).optional(),
   nameEn: z.string().min(1),
   nameUr: z.string().min(1),
   type: z.enum(['ASSET', 'LIABILITY']),
@@ -91,7 +93,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           type: cat.type,
           nameEn: cat.nameEn,
           nameUr: cat.nameUr,
-          sortOrder: index
+          sortOrder: index,
+        stableId: cat.stableId
         }
       });
 
@@ -103,7 +106,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             amount: item.amount,
-            sortOrder: itemIndex
+            sortOrder: itemIndex,
+          stableId: item.stableId
           }
         });
       }

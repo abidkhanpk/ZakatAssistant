@@ -45,14 +45,16 @@ async function main() {
         nameEn: category.nameEn,
         nameUr: category.nameUr,
         isDefault: true,
-        sortOrder: defaultCategoryTemplates.indexOf(category)
+        sortOrder: defaultCategoryTemplates.indexOf(category),
+        stableId: category.key
       },
       update: {
         type: category.type,
         nameEn: category.nameEn,
         nameUr: category.nameUr,
         isDefault: true,
-        sortOrder: defaultCategoryTemplates.indexOf(category)
+        sortOrder: defaultCategoryTemplates.indexOf(category),
+        stableId: category.key
       }
     });
   }

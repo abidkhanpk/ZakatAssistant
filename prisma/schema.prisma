@@ -103,6 +103,7 @@ model Category {
   nameUr    String
   isDefault Boolean      @default(false)
   sortOrder Int          @default(0)
+  stableId  String?
   record    ZakatRecord? @relation(fields: [recordId], references: [id], onDelete: Cascade)
   items     LineItem[]
 
@@ -117,6 +118,7 @@ model LineItem {
   unitPrice   Decimal? @db.Decimal(18, 2)
   amount      Decimal  @db.Decimal(18, 2)
   sortOrder   Int      @default(0)
+  stableId    String?
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 }
 

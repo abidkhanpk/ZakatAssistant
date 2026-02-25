@@ -6,12 +6,20 @@ import { defaultCategoryTemplates, type CategoryTemplate } from '@/lib/default-c
 import { useRouter } from 'next/navigation';
 
 type Item = {
+  stableId: string;
+  description: string;
+  amount: number;
+};
+
+type InitialItem = {
+  stableId?: string;
   description: string;
   amount: number;
 };
 
 type Category = {
   id: string;
+  stableId: string;
   nameEn: string;
   nameUr: string;
   type: 'ASSET' | 'LIABILITY';
@@ -25,10 +33,11 @@ export type RecordFormInitialData = {
   yearLabel: string;
   calendarType: 'ISLAMIC' | 'GREGORIAN';
   categories: {
+    stableId?: string;
     nameEn: string;
     nameUr: string;
     type: 'ASSET' | 'LIABILITY';
-    items: Item[];
+    items: InitialItem[];
   }[];
 };
 
@@ -63,10 +72,15 @@ function localizeDefaultDescription(description: string, isUr: boolean) {
 function toCategory(template: CategoryTemplate, idx: number, isUr: boolean): Category {
   return {
     id: `cat-${idx}-${template.type}`,
+    stableId: template.key,
     nameEn: template.nameEn,
     nameUr: template.nameUr,
     type: template.type,
-    items: template.items.map((item) => ({ ...item, description: localizeDefaultDescription(item.description, isUr) })),
+    items: template.items.map((item) => ({
+      stableId: item.key,
+      description: localizeDefaultDescription(item.description, isUr),
+      amount: item.amount
+    })),
     collapsed: false,
     isCustom: false
   };
@@ -81,6 +95,13 @@ function move<T>(arr: T[], from: number, to: number) {
   const [item] = copy.splice(from, 1);
   copy.splice(to, 0, item);
   return copy;
+}
+
+function createCustomStableId(prefix: 'cat' | 'item') {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `custom-${prefix}-${crypto.randomUUID()}`;
+  }
+  return `custom-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function NewRecordForm({
@@ -109,10 +130,11 @@ export function NewRecordForm({
     if (initialData?.categories?.length) {
       return initialData.categories.map((category, idx) => ({
         id: `cat-${idx}-${category.type}`,
+        stableId: category.stableId || createCustomStableId('cat'),
         nameEn: category.nameEn,
         nameUr: category.nameUr,
         type: category.type,
-        items: category.items.map((item) => ({ ...item })),
+        items: category.items.map((item) => ({ ...item, stableId: item.stableId || createCustomStableId('item') })),
         collapsed: false,
         isCustom: isCustomCategoryName(category.nameEn, category.nameUr)
       }));
@@ -154,10 +176,11 @@ export function NewRecordForm({
         ...prev,
         {
           id: `cat-${Date.now()}`,
+          stableId: createCustomStableId('cat'),
           nameEn: type === 'ASSET' ? 'Custom asset category' : 'Custom liability category',
           nameUr: type === 'ASSET' ? 'کسٹم اثاثہ زمرہ' : 'کسٹم واجبات زمرہ',
           type,
-          items: [{ description: isUr ? 'تفصیل' : 'Description', amount: 0 }],
+          items: [{ stableId: createCustomStableId('item'), description: isUr ? 'تفصیل' : 'Description', amount: 0 }],
           collapsed: false,
           isCustom: true
         }
@@ -171,7 +194,11 @@ export function NewRecordForm({
 
   function addItem(categoryIndex: number) {
     setCategories((prev) =>
-      prev.map((category, i) => (i === categoryIndex ? { ...category, items: [...category.items, { description: isUr ? 'تفصیل' : 'Description', amount: 0 }] } : category))
+      prev.map((category, i) =>
+        i === categoryIndex
+          ? { ...category, items: [...category.items, { stableId: createCustomStableId('item'), description: isUr ? 'تفصیل' : 'Description', amount: 0 }] }
+          : category
+      )
     );
   }
 
@@ -204,7 +231,10 @@ export function NewRecordForm({
       prev.map((category, i) => {
         if (i !== categoryIndex) return category;
         const remaining = category.items.filter((_, ii) => ii !== itemIndex);
-        return { ...category, items: remaining.length ? remaining : [{ description: isUr ? 'تفصیل' : 'Description', amount: 0 }] };
+        return {
+          ...category,
+          items: remaining.length ? remaining : [{ stableId: createCustomStableId('item'), description: isUr ? 'تفصیل' : 'Description', amount: 0 }]
+        };
       })
     );
   }
@@ -265,7 +295,18 @@ export function NewRecordForm({
         <input
           type="hidden"
           name="payload"
-          value={JSON.stringify({ locale, yearLabel, calendarType, categories: categories.map((category) => ({ nameEn: category.nameEn, nameUr: category.nameUr, type: category.type, items: category.items })) })}
+          value={JSON.stringify({
+            locale,
+            yearLabel,
+            calendarType,
+            categories: categories.map((category) => ({
+              stableId: category.stableId,
+              nameEn: category.nameEn,
+              nameUr: category.nameUr,
+              type: category.type,
+              items: category.items.map((item) => ({ stableId: item.stableId, description: item.description, amount: item.amount }))
+            }))
+          })}
         />
 
         <div className="card grid gap-3 md:grid-cols-4">
