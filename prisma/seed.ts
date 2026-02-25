@@ -1,9 +1,32 @@
 import { PrismaClient, Role } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { randomBytes, scrypt as scryptCallback } from 'crypto';
 import { promisify } from 'util';
 import { defaultCategoryTemplates } from '../lib/default-categories';
 
-const prisma = new PrismaClient();
+function normalizeDatabaseUrl(url?: string) {
+  if (!url) return '';
+  const trimmed = url.trim().replace(/^['"]|['"]$/g, '');
+  try {
+    const parsed = new URL(trimmed);
+    const sslMode = parsed.searchParams.get('sslmode');
+    const useLibpqCompat = parsed.searchParams.get('uselibpqcompat') === 'true';
+
+    if (!useLibpqCompat && (sslMode === 'prefer' || sslMode === 'require' || sslMode === 'verify-ca')) {
+      parsed.searchParams.set('sslmode', 'verify-full');
+    }
+
+    return parsed.toString();
+  } catch {
+    return trimmed;
+  }
+}
+
+const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL);
+const adapter = databaseUrl ? new PrismaPg({ connectionString: databaseUrl }) : undefined;
+const prisma = new PrismaClient({
+  adapter
+});
 const scrypt = promisify(scryptCallback);
 
 function toSeedId(name: string, type: 'ASSET' | 'LIABILITY') {
