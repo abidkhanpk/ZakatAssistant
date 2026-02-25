@@ -35,7 +35,22 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const totals = calculateZakat({ calendarType: existing.calendarType, assets, liabilities });
 
-  const nextYearLabel = String((Number(existing.yearLabel) || new Date().getFullYear()) + 1);
+  const nextYearLabel = String((Number(existing.yearLabel) || new Date().getFullYear()) + 1).trim();
+  const existingForYear = (
+    await prisma.zakatRecord.findMany({
+      where: { userId: user.id },
+      select: { id: true, yearLabel: true }
+    })
+  ).find((entry) => entry.yearLabel.trim() === nextYearLabel);
+  if (existingForYear) {
+    return NextResponse.redirect(
+      new URL(
+        `/${locale}/app/records/new?duplicateYear=${encodeURIComponent(nextYearLabel)}&existingRecordId=${encodeURIComponent(existingForYear.id)}`,
+        req.url
+      ),
+      303
+    );
+  }
 
   const clone = await prisma.zakatRecord.create({
     data: {

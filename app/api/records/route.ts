@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -47,56 +48,103 @@ export async function POST(req: Request) {
     ...rawPayload,
     locale: String(form.locale || rawPayload.locale || 'en')
   });
+  const normalizedYearLabel = payload.yearLabel.trim();
 
   const assets = payload.categories.filter((c) => c.type === 'ASSET');
   const liabilities = payload.categories.filter((c) => c.type === 'LIABILITY');
   const totals = calculateZakat({ calendarType: payload.calendarType, assets, liabilities });
 
-  const record = await prisma.zakatRecord.create({
-    data: {
-      userId: user.id,
-      yearLabel: payload.yearLabel,
-      calculationDate: new Date(),
-      calendarType: payload.calendarType,
-      zakatRate: totals.zakatRate,
-      totalAssets: totals.totalAssets,
-      totalDeductions: totals.totalDeductions,
-      netZakatable: totals.netZakatable,
-      zakatPayable: totals.zakatPayable,
-      currency: 'PKR'
-    }
-  });
-
-  for (const [index, cat] of payload.categories.entries()) {
-    const categoryStableId = ensureCategoryStableId(cat, index);
-    const category = await prisma.category.create({
-      data: {
-        recordId: record.id,
-        type: cat.type,
-        nameEn: cat.nameEn,
-        nameUr: cat.nameUr,
-        sortOrder: index,
-        stableId: categoryStableId
-      }
-    });
-
-    for (const [itemIndex, item] of cat.items.entries()) {
-      await prisma.lineItem.create({
-        data: {
-          categoryId: category.id,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          amount: item.amount,
-          sortOrder: itemIndex,
-          stableId: ensureItemStableId(item, categoryStableId, itemIndex)
+  try {
+    const record = await prisma.$transaction(
+      async (tx) => {
+        const existingForYear = (
+          await tx.zakatRecord.findMany({
+            where: { userId: user.id },
+            select: { id: true, yearLabel: true }
+          })
+        ).find((entry) => entry.yearLabel.trim() === normalizedYearLabel);
+        if (existingForYear) {
+          return { duplicateId: existingForYear.id, createdId: null as string | null };
         }
-      });
-    }
-  }
 
-  return NextResponse.redirect(
-    new URL(`/${payload.locale}/app/records/${record.id}?year=${encodeURIComponent(payload.yearLabel)}`, req.url),
-    303
-  );
+        const created = await tx.zakatRecord.create({
+          data: {
+            userId: user.id,
+            yearLabel: normalizedYearLabel,
+            calculationDate: new Date(),
+            calendarType: payload.calendarType,
+            zakatRate: totals.zakatRate,
+            totalAssets: totals.totalAssets,
+            totalDeductions: totals.totalDeductions,
+            netZakatable: totals.netZakatable,
+            zakatPayable: totals.zakatPayable,
+            currency: 'PKR'
+          }
+        });
+
+        for (const [index, cat] of payload.categories.entries()) {
+          const categoryStableId = ensureCategoryStableId(cat, index);
+          const category = await tx.category.create({
+            data: {
+              recordId: created.id,
+              type: cat.type,
+              nameEn: cat.nameEn,
+              nameUr: cat.nameUr,
+              sortOrder: index,
+              stableId: categoryStableId
+            }
+          });
+
+          for (const [itemIndex, item] of cat.items.entries()) {
+            await tx.lineItem.create({
+              data: {
+                categoryId: category.id,
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                amount: item.amount,
+                sortOrder: itemIndex,
+                stableId: ensureItemStableId(item, categoryStableId, itemIndex)
+              }
+            });
+          }
+        }
+
+        return { duplicateId: null as string | null, createdId: created.id };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+    if (record.duplicateId) {
+      return NextResponse.redirect(
+        new URL(
+          `/${payload.locale}/app/records/new?duplicateYear=${encodeURIComponent(normalizedYearLabel)}&existingRecordId=${encodeURIComponent(record.duplicateId)}`,
+          req.url
+        ),
+        303
+      );
+    }
+
+    return NextResponse.redirect(
+      new URL(`/${payload.locale}/app/records/${record.createdId}?year=${encodeURIComponent(normalizedYearLabel)}`, req.url),
+      303
+    );
+  } catch {
+    const existingForYear = (
+      await prisma.zakatRecord.findMany({
+        where: { userId: user.id },
+        select: { id: true, yearLabel: true }
+      })
+    ).find((entry) => entry.yearLabel.trim() === normalizedYearLabel);
+    if (existingForYear) {
+      return NextResponse.redirect(
+        new URL(
+          `/${payload.locale}/app/records/new?duplicateYear=${encodeURIComponent(normalizedYearLabel)}&existingRecordId=${encodeURIComponent(existingForYear.id)}`,
+          req.url
+        ),
+        303
+      );
+    }
+    throw new Error('Failed to create record');
+  }
 }

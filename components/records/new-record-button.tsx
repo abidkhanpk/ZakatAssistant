@@ -16,6 +16,7 @@ export function NewRecordButton({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'IMPORT' | 'FRESH' | null>(null);
   const isUr = locale === 'ur';
 
   function handleNewRecordClick() {
@@ -28,7 +29,7 @@ export function NewRecordButton({
 
   return (
     <>
-      <button className="inline-block rounded bg-brand p-2 text-white" onClick={handleNewRecordClick}>
+      <button type="button" className="inline-block rounded bg-brand p-2 text-white" onClick={handleNewRecordClick}>
         {isUr ? 'نیا ریکارڈ' : 'New Record'}
       </button>
 
@@ -43,24 +44,30 @@ export function NewRecordButton({
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <button
-                className="rounded bg-brand px-3 py-2 text-white"
+                type="button"
+                className="rounded bg-brand px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={pendingAction !== null}
                 onClick={() => {
+                  setPendingAction('IMPORT');
                   setOpen(false);
                   router.push(importHref);
                 }}
               >
-                {isUr ? 'امپورٹ کریں' : 'Import'}
+                {pendingAction === 'IMPORT' ? (isUr ? 'کھل رہا ہے...' : 'Opening...') : isUr ? 'امپورٹ کریں' : 'Import'}
               </button>
               <button
-                className="rounded border px-3 py-2"
+                type="button"
+                className="rounded border px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={pendingAction !== null}
                 onClick={() => {
+                  setPendingAction('FRESH');
                   setOpen(false);
                   router.push(startFreshHref);
                 }}
               >
-                {isUr ? 'نیا شروع کریں' : 'Start fresh'}
+                {pendingAction === 'FRESH' ? (isUr ? 'کھل رہا ہے...' : 'Opening...') : isUr ? 'نیا شروع کریں' : 'Start fresh'}
               </button>
-              <button className="rounded border px-3 py-2" onClick={() => setOpen(false)}>
+              <button type="button" className="rounded border px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60" disabled={pendingAction !== null} onClick={() => setOpen(false)}>
                 {isUr ? 'منسوخ' : 'Cancel'}
               </button>
             </div>

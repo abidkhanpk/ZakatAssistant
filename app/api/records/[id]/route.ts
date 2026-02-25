@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -63,17 +64,52 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     ...rawPayload,
     locale: String(form.locale || rawPayload.locale || 'en')
   });
+  const normalizedYearLabel = payload.yearLabel.trim();
+  const existingForYear = (
+    await prisma.zakatRecord.findMany({
+      where: {
+        userId: user.id,
+        id: { not: existing.id }
+      },
+      select: { id: true, yearLabel: true }
+    })
+  ).find((entry) => entry.yearLabel.trim() === normalizedYearLabel);
+  if (existingForYear) {
+    if (intent === 'save' || intent === 'update') {
+      return NextResponse.json(
+        { error: 'DUPLICATE_YEAR', yearLabel: normalizedYearLabel, existingRecordId: existingForYear.id },
+        { status: 409 }
+      );
+    }
+    return NextResponse.redirect(
+      new URL(
+        `/${payload.locale}/app/records/new?editRecordId=${existing.id}&duplicateYear=${encodeURIComponent(normalizedYearLabel)}&existingRecordId=${encodeURIComponent(existingForYear.id)}`,
+        req.url
+      ),
+      303
+    );
+  }
 
   const assets = payload.categories.filter((c) => c.type === 'ASSET');
   const liabilities = payload.categories.filter((c) => c.type === 'LIABILITY');
   const totals = calculateZakat({ calendarType: payload.calendarType, assets, liabilities });
   const transactionTimeoutMs = await getRecordMutationTimeoutMs();
 
-  await prisma.$transaction(async (tx) => {
+  const txResult = await prisma.$transaction(async (tx) => {
+    const conflict = (
+      await tx.zakatRecord.findMany({
+        where: { userId: user.id, id: { not: existing.id } },
+        select: { id: true, yearLabel: true }
+      })
+    ).find((entry) => entry.yearLabel.trim() === normalizedYearLabel);
+    if (conflict) {
+      throw new Error(`DUPLICATE_YEAR:${conflict.id}`);
+    }
+
     await tx.zakatRecord.update({
       where: { id: existing.id },
       data: {
-        yearLabel: payload.yearLabel,
+        yearLabel: normalizedYearLabel,
         calculationDate: new Date(),
         calendarType: payload.calendarType,
         zakatRate: totals.zakatRate,
@@ -115,7 +151,28 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         });
       }
     }
-  }, { timeout: transactionTimeoutMs });
+  }, { timeout: transactionTimeoutMs, isolationLevel: Prisma.TransactionIsolationLevel.Serializable }).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : '';
+    if (message.startsWith('DUPLICATE_YEAR:')) {
+      const duplicateId = message.slice('DUPLICATE_YEAR:'.length);
+      if (intent === 'save' || intent === 'update') {
+        return NextResponse.json(
+          { error: 'DUPLICATE_YEAR', yearLabel: normalizedYearLabel, existingRecordId: duplicateId },
+          { status: 409 }
+        );
+      }
+      return NextResponse.redirect(
+        new URL(
+          `/${payload.locale}/app/records/new?editRecordId=${existing.id}&duplicateYear=${encodeURIComponent(normalizedYearLabel)}&existingRecordId=${encodeURIComponent(duplicateId)}`,
+          req.url
+        ),
+        303
+      );
+    }
+    throw error;
+  });
+
+  if (txResult instanceof NextResponse) return txResult;
 
   revalidatePath(`/${payload.locale}/app/records`);
   revalidatePath(`/${payload.locale}/app/records/${existing.id}`);
@@ -126,7 +183,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   return NextResponse.redirect(
-    new URL(`/${payload.locale}/app/records/${existing.id}?year=${encodeURIComponent(payload.yearLabel)}`, req.url),
+    new URL(`/${payload.locale}/app/records/${existing.id}?year=${encodeURIComponent(normalizedYearLabel)}`, req.url),
     303
   );
 }

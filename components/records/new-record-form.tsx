@@ -47,6 +47,11 @@ export type RecordFormInitialData = {
   }[];
 };
 
+type ExistingYearRecord = {
+  id: string;
+  yearLabel: string;
+};
+
 function localizeDefaultDescription(description: string, isUr: boolean) {
   if (description === 'Amount') return isUr ? 'تفصیل' : 'Description';
   if (description === 'Other') return isUr ? 'دیگر' : 'Other';
@@ -157,7 +162,10 @@ export function NewRecordForm({
   initialData,
   formAction,
   submitLabel,
-  promptImportFromId
+  promptImportFromId,
+  duplicateYear,
+  existingRecordId,
+  existingYearRecords
 }: {
   locale: string;
   currentUserId: string;
@@ -166,15 +174,23 @@ export function NewRecordForm({
   formAction?: string;
   submitLabel?: string;
   promptImportFromId?: string;
+  duplicateYear?: string;
+  existingRecordId?: string;
+  existingYearRecords?: ExistingYearRecord[];
 }) {
   const router = useRouter();
   const isUr = locale === 'ur';
   const [showImportPrompt, setShowImportPrompt] = useState(Boolean(promptImportFromId));
+  const [importPromptAction, setImportPromptAction] = useState<'IMPORT' | 'FRESH' | 'CANCEL' | null>(null);
   const [mode, setMode] = useState<'WIZARD' | 'ADVANCED'>('WIZARD');
   const [wizardStep, setWizardStep] = useState(0);
   const [showClosePrompt, setShowClosePrompt] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+  const [duplicateInfo, setDuplicateInfo] = useState<{ yearLabel: string; recordId: string } | null>(
+    duplicateYear && existingRecordId ? { yearLabel: duplicateYear, recordId: existingRecordId } : null
+  );
   const [yearLabel, setYearLabel] = useState(initialData?.yearLabel || String(new Date().getFullYear()));
   const [calendarType, setCalendarType] = useState<'ISLAMIC' | 'GREGORIAN'>(initialData?.calendarType || 'ISLAMIC');
   const [saveWhenChangingSection, setSaveWhenChangingSection] = useState(true);
@@ -236,6 +252,13 @@ export function NewRecordForm({
   });
   const [lastSavedPayloadJson, setLastSavedPayloadJson] = useState(payloadJson);
   const hasUnsavedChanges = payloadJson !== lastSavedPayloadJson;
+  const duplicateYearRecord = useMemo(() => {
+    const targetYear = yearLabel.trim();
+    if (!targetYear) return null;
+    return (existingYearRecords || []).find(
+      (entry) => entry.id !== initialData?.recordId && entry.yearLabel.trim() === targetYear
+    ) || null;
+  }, [existingYearRecords, initialData?.recordId, yearLabel]);
 
   const totals = useMemo(() => {
     const totalAssets = categories.filter((c) => c.type === 'ASSET').flatMap((c) => c.items).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -340,8 +363,13 @@ export function NewRecordForm({
 
   async function persistRecord(stayOnPage: boolean) {
     if (!isEditMode || !formAction || isSaving) return false;
+    if (duplicateYearRecord) {
+      setDuplicateInfo({ yearLabel: duplicateYearRecord.yearLabel.trim(), recordId: duplicateYearRecord.id });
+      return false;
+    }
     setIsSaving(true);
     setSaveFeedback(null);
+    setDuplicateInfo(null);
     try {
       const body = new FormData();
       body.set('csrfToken', csrfToken);
@@ -350,7 +378,16 @@ export function NewRecordForm({
       body.set('payload', payloadJson);
 
       const response = await fetch(formAction, { method: 'POST', body });
-      if (!response.ok) throw new Error(`Save failed (${response.status})`);
+      if (!response.ok) {
+        if (response.status === 409) {
+          const payload = (await response.json().catch(() => null)) as { error?: string; yearLabel?: string; existingRecordId?: string } | null;
+          if (payload?.error === 'DUPLICATE_YEAR' && payload.yearLabel && payload.existingRecordId) {
+            setDuplicateInfo({ yearLabel: payload.yearLabel, recordId: payload.existingRecordId });
+            return false;
+          }
+        }
+        throw new Error(`Save failed (${response.status})`);
+      }
 
       if (stayOnPage) {
         setLastSavedPayloadJson(payloadJson);
@@ -409,6 +446,23 @@ export function NewRecordForm({
   }
 
   useEffect(() => {
+    if (duplicateYearRecord) {
+      const nextYear = duplicateYearRecord.yearLabel.trim();
+      if (!duplicateInfo || duplicateInfo.recordId !== duplicateYearRecord.id || duplicateInfo.yearLabel !== nextYear) {
+        setDuplicateInfo({ yearLabel: nextYear, recordId: duplicateYearRecord.id });
+      }
+      return;
+    }
+    if (duplicateInfo && duplicateInfo.yearLabel.trim() !== yearLabel.trim()) {
+      setDuplicateInfo(null);
+    }
+  }, [duplicateYearRecord, duplicateInfo, yearLabel]);
+
+  useEffect(() => {
+    setShowImportPrompt(Boolean(promptImportFromId));
+  }, [promptImportFromId]);
+
+  useEffect(() => {
     if (!isEditMode) return;
     try {
       const saved = localStorage.getItem(savePreferenceKey);
@@ -428,6 +482,12 @@ export function NewRecordForm({
     }
   }, [isEditMode, savePreferenceKey, saveWhenChangingSection]);
 
+  useEffect(() => {
+    if (!showImportPrompt && importPromptAction) {
+      setImportPromptAction(null);
+    }
+  }, [showImportPrompt, importPromptAction]);
+
   return (
     <main className="mx-auto max-w-5xl space-y-4 p-4">
       {showImportPrompt ? (
@@ -441,13 +501,37 @@ export function NewRecordForm({
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <button
-                className="rounded bg-brand px-3 py-2 text-white"
-                onClick={() => router.replace(`/${locale}/app/records/new?importFrom=${promptImportFromId}`)}
+                type="button"
+                className="rounded bg-brand px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={importPromptAction !== null}
+                onClick={() => {
+                  setImportPromptAction('IMPORT');
+                  router.replace(`/${locale}/app/records/new?importFrom=${promptImportFromId}`);
+                }}
               >
-                {isUr ? 'امپورٹ کریں' : 'Import'}
+                {importPromptAction === 'IMPORT' ? (isUr ? 'کھل رہا ہے...' : 'Opening...') : isUr ? 'امپورٹ کریں' : 'Import'}
               </button>
-              <button className="rounded border px-3 py-2" onClick={() => setShowImportPrompt(false)}>
-                {isUr ? 'نیا شروع کریں' : 'Start fresh'}
+              <button
+                type="button"
+                className="rounded border px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={importPromptAction !== null}
+                onClick={() => {
+                  setImportPromptAction('FRESH');
+                  setShowImportPrompt(false);
+                }}
+              >
+                {importPromptAction === 'FRESH' ? (isUr ? 'کھل رہا ہے...' : 'Opening...') : isUr ? 'نیا شروع کریں' : 'Start fresh'}
+              </button>
+              <button
+                type="button"
+                className="rounded border px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={importPromptAction !== null}
+                onClick={() => {
+                  setImportPromptAction('CANCEL');
+                  router.replace(`/${locale}/app/records`);
+                }}
+              >
+                {importPromptAction === 'CANCEL' ? (isUr ? 'جا رہا ہے...' : 'Closing...') : isUr ? 'منسوخ' : 'Cancel'}
               </button>
             </div>
           </div>
@@ -475,7 +559,23 @@ export function NewRecordForm({
         </div>
       ) : null}
 
-      <motion.form initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} method="post" action={formAction || '/api/records'} className="space-y-4">
+      <motion.form
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        method="post"
+        action={formAction || '/api/records'}
+        className="space-y-4"
+        onSubmit={(e) => {
+          if (duplicateYearRecord) {
+            e.preventDefault();
+            setDuplicateInfo({ yearLabel: duplicateYearRecord.yearLabel.trim(), recordId: duplicateYearRecord.id });
+            return;
+          }
+          if (!isEditMode) {
+            setIsCreating(true);
+          }
+        }}
+      >
         <input type="hidden" name="csrfToken" value={csrfToken} />
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="payload" value={payloadJson} />
@@ -490,6 +590,16 @@ export function NewRecordForm({
                 </option>
               ))}
             </select>
+            {duplicateInfo ? (
+              <p className="mt-1 text-xs text-red-700">
+                {isUr
+                  ? `اس سال (${duplicateInfo.yearLabel}) کا ریکارڈ پہلے سے موجود ہے۔ `
+                  : `A record for year ${duplicateInfo.yearLabel} already exists. `}
+                <a className="underline" href={`/${locale}/app/records/${duplicateInfo.recordId}?year=${encodeURIComponent(duplicateInfo.yearLabel)}`}>
+                  {isUr ? 'موجودہ ریکارڈ کھولیں' : 'Open existing record'}
+                </a>
+              </p>
+            ) : null}
           </div>
           <div>
             <label className="text-sm font-medium">{isUr ? 'کیلنڈر' : 'Calendar'}</label>
@@ -528,16 +638,14 @@ export function NewRecordForm({
               </button>
               <span className="justify-self-center font-semibold text-brand md:col-start-2">{isUr ? 'مرحلہ' : 'Step'} {wizardStep + 1} / {Math.max(categorySteps.length, 1)}</span>
               <div className="col-span-2 flex items-center justify-end gap-3 md:col-span-1">
-                {isEditMode ? (
-                  <label className="flex items-center gap-2 text-xs text-slate-700 md:text-sm">
-                    <span>{isUr ? 'سیکشن تبدیل کرتے وقت محفوظ کریں' : 'Save when changing section'}</span>
-                    <input
-                      type="checkbox"
-                      checked={saveWhenChangingSection}
-                      onChange={(e) => setSaveWhenChangingSection(e.target.checked)}
-                    />
-                  </label>
-                ) : null}
+                <label className="flex items-center gap-2 text-xs text-slate-700 md:text-sm">
+                  <span>{isUr ? 'سیکشن تبدیل کرتے وقت محفوظ کریں' : 'Save when changing section'}</span>
+                  <input
+                    type="checkbox"
+                    checked={saveWhenChangingSection}
+                    onChange={(e) => setSaveWhenChangingSection(e.target.checked)}
+                  />
+                </label>
                 <button
                   type="button"
                   className="rounded border border-brand/40 bg-white px-3 py-1 font-medium text-brand hover:bg-brand/5 disabled:cursor-not-allowed disabled:opacity-50"
@@ -718,19 +826,26 @@ export function NewRecordForm({
         }) : null}
 
         <div className="sticky bottom-0 flex flex-wrap gap-2 bg-slate-50/95 py-3 backdrop-blur">
-          <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('ASSET')}>{isUr ? 'اثاثہ زمرہ شامل کریں' : 'Add asset category'}</button>
-          <button type="button" className="rounded border px-3 py-2" onClick={() => addCategory('LIABILITY')}>{isUr ? 'واجبات زمرہ شامل کریں' : 'Add liability category'}</button>
+          <button type="button" className="inline-flex h-10 items-center rounded border px-3 py-2" onClick={() => addCategory('ASSET')}>{isUr ? 'اثاثہ زمرہ شامل کریں' : 'Add asset category'}</button>
+          <button type="button" className="inline-flex h-10 items-center rounded border px-3 py-2" onClick={() => addCategory('LIABILITY')}>{isUr ? 'واجبات زمرہ شامل کریں' : 'Add liability category'}</button>
           {isEditMode ? (
             <>
-              <button type="button" className="h-10 rounded border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleManualSave} disabled={isSaving}>
+              <button type="button" className="inline-flex h-10 items-center rounded border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleManualSave} disabled={isSaving || Boolean(duplicateYearRecord)}>
                 {isSaving ? (isUr ? 'محفوظ ہو رہا ہے...' : 'Saving...') : isUr ? 'محفوظ کریں' : 'Save'}
               </button>
-              <button type="button" className="h-10 rounded bg-brand px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCloseAction} disabled={isSaving}>
+              <button type="button" className="inline-flex h-10 items-center rounded bg-brand px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCloseAction} disabled={isSaving}>
                 {submitLabel || (isUr ? 'بند کریں' : 'Close')}
               </button>
             </>
           ) : (
-            <button className="rounded bg-brand px-4 py-2 text-white">{submitLabel || (isUr ? 'ریکارڈ محفوظ کریں' : 'Save record')}</button>
+            <>
+              <button className="inline-flex h-10 items-center rounded bg-brand px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={isCreating || Boolean(duplicateYearRecord)}>
+                {isCreating ? (isUr ? 'محفوظ ہو رہا ہے...' : 'Saving...') : submitLabel || (isUr ? 'ریکارڈ محفوظ کریں' : 'Save record')}
+              </button>
+              <button type="button" className="inline-flex h-10 items-center rounded border px-4 py-2" onClick={() => router.push(`/${locale}/app/records`)}>
+                {isUr ? 'بند کریں' : 'Close'}
+              </button>
+            </>
           )}
         </div>
       </motion.form>

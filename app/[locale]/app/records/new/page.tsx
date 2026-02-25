@@ -10,7 +10,7 @@ export default async function NewRecordPage({
   searchParams
 }: {
   params: { locale: string };
-  searchParams: { editRecordId?: string; importFrom?: string; skipImportPrompt?: string };
+  searchParams: { editRecordId?: string; importFrom?: string; skipImportPrompt?: string; duplicateYear?: string; existingRecordId?: string };
 }) {
   const user = await getCurrentUser();
   if (!user) redirect(`/${params.locale}/login`);
@@ -79,6 +79,11 @@ export default async function NewRecordPage({
           }))
         )?.id
       : undefined;
+  const existingYearRecords = await prisma.zakatRecord.findMany({
+    where: { userId: user.id },
+    select: { id: true, yearLabel: true },
+    orderBy: { updatedAt: 'desc' }
+  });
 
   return (
     <NewRecordForm
@@ -89,6 +94,9 @@ export default async function NewRecordPage({
       formAction={editRecordId ? `/api/records/${editRecordId}` : '/api/records'}
       submitLabel={editRecordId ? (params.locale === 'ur' ? 'بند کریں' : 'Close') : undefined}
       promptImportFromId={promptImportFromId}
+      duplicateYear={searchParams.duplicateYear}
+      existingRecordId={searchParams.existingRecordId}
+      existingYearRecords={existingYearRecords}
     />
   );
 }
