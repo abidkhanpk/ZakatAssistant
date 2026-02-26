@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useEffect, useMemo, useState, type WheelEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type WheelEvent } from 'react';
 import {
   defaultCategoryTemplates,
   findTemplateCategoryByNames,
@@ -222,6 +222,7 @@ export function NewRecordForm({
   existingYearRecords?: ExistingYearRecord[];
 }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const isUr = locale === 'ur';
   const [showImportPrompt, setShowImportPrompt] = useState(Boolean(promptImportFromId));
   const [importPromptAction, setImportPromptAction] = useState<'IMPORT' | 'FRESH' | 'CANCEL' | null>(null);
@@ -418,7 +419,11 @@ export function NewRecordForm({
   }
 
   async function handleCloseAction() {
-    if (!isEditMode || !initialData?.recordId) return;
+    if (!isEditMode) {
+      setShowClosePrompt(true);
+      return;
+    }
+    if (!initialData?.recordId) return;
     if (!hasUnsavedChanges) {
       router.push(`/${locale}/app/records/${initialData.recordId}?year=${encodeURIComponent(yearLabel)}`);
       return;
@@ -427,7 +432,11 @@ export function NewRecordForm({
   }
 
   async function handleSaveAndClose() {
-    if (!isEditMode || !initialData?.recordId) return;
+    if (!isEditMode) {
+      formRef.current?.requestSubmit();
+      return;
+    }
+    if (!initialData?.recordId) return;
     const ok = await persistRecord(true);
     if (!ok) return;
     setShowClosePrompt(false);
@@ -435,7 +444,12 @@ export function NewRecordForm({
   }
 
   function handleDiscardAndClose() {
-    if (!isEditMode || !initialData?.recordId) return;
+    if (!isEditMode) {
+      setShowClosePrompt(false);
+      router.push(`/${locale}/app/records`);
+      return;
+    }
+    if (!initialData?.recordId) return;
     setShowClosePrompt(false);
     router.push(`/${locale}/app/records/${initialData.recordId}?year=${encodeURIComponent(yearLabel)}`);
   }
@@ -587,6 +601,7 @@ export function NewRecordForm({
       ) : null}
 
       <motion.form
+        ref={formRef}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         method="post"
@@ -869,7 +884,7 @@ export function NewRecordForm({
               <button className="inline-flex h-10 items-center rounded bg-brand px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60" disabled={isCreating || Boolean(duplicateYearRecord)}>
                 {isCreating ? (isUr ? 'محفوظ ہو رہا ہے...' : 'Saving...') : submitLabel || (isUr ? 'ریکارڈ محفوظ کریں' : 'Save record')}
               </button>
-              <button type="button" className="inline-flex h-10 items-center rounded border px-4 py-2" onClick={() => router.push(`/${locale}/app/records`)}>
+              <button type="button" className="inline-flex h-10 items-center rounded border px-4 py-2" onClick={handleCloseAction}>
                 {isUr ? 'بند کریں' : 'Close'}
               </button>
             </>
