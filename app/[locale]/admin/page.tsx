@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { CsrfInput } from '@/components/csrf-input';
+import { DeleteUserButton } from '@/components/admin/delete-user-button';
 import { getSmtpSettings } from '@/lib/smtp';
 import { MAX_RECORDS_MUTATION_TIMEOUT_MS, MIN_RECORDS_MUTATION_TIMEOUT_MS, getRecordMutationTimeoutMs } from '@/lib/runtime-settings';
 
@@ -74,7 +75,7 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b text-left">
-                  <th className="p-2">{isUr ? 'یوزرنیم' : 'Username'}</th><th className="p-2">{isUr ? 'نام' : 'Name'}</th><th className="p-2">Email</th><th className="p-2">Role</th><th className="p-2">{isUr ? 'تصدیق' : 'Verified'}</th><th className="p-2">{isUr ? 'پاس ورڈ' : 'Password'}</th><th className="p-2">{isUr ? 'محفوظ' : 'Save'}</th>
+                  <th className="p-2">{isUr ? 'یوزرنیم' : 'Username'}</th><th className="p-2">{isUr ? 'نام' : 'Name'}</th><th className="p-2">Email</th><th className="p-2">Role</th><th className="p-2">{isUr ? 'تصدیق' : 'Verified'}</th><th className="p-2">{isUr ? 'پاس ورڈ' : 'Password'}</th><th className="p-2">{isUr ? 'عمل' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -83,7 +84,6 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
                     <td className="p-2" colSpan={7}>
                       <form className="grid gap-2 md:grid-cols-7" method="post" action="/api/admin/users">
                         <CsrfInput />
-                        <input type="hidden" name="action" value="update-full" />
                         <input type="hidden" name="locale" value={params.locale} />
                         <input type="hidden" name="userId" value={user.id} />
                         <input name="username" className="rounded border p-2" defaultValue={user.username} required />
@@ -92,7 +92,12 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
                         <select name="role" className="rounded border p-2" defaultValue={user.role}><option value="USER">USER</option><option value="ADMIN">ADMIN</option></select>
                         <label className="flex items-center gap-2 rounded border p-2"><input name="verified" type="checkbox" defaultChecked={!!user.emailVerifiedAt} /> {isUr ? 'تصدیق شدہ' : 'Verified'}</label>
                         <input name="newPassword" type="password" className="rounded border p-2" placeholder={isUr ? 'نیا پاس ورڈ (اختیاری)' : 'New password (optional)'} minLength={8} />
-                        <button className="rounded border p-2">{isUr ? 'محفوظ کریں' : 'Save'}</button>
+                        <div className="flex items-center gap-2">
+                          <button name="action" value="update-full" className="rounded border p-2">{isUr ? 'محفوظ کریں' : 'Save'}</button>
+                          {user.id !== admin.id ? (
+                            <DeleteUserButton isUr={isUr} />
+                          ) : null}
+                        </div>
                       </form>
                     </td>
                   </tr>
@@ -106,6 +111,13 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
       {activeTab === 'settings' ? (
         <>
           {searchParams.smtpError ? <p className="text-sm text-red-600">{isUr ? 'SMTP خرابی' : 'SMTP error'}</p> : null}
+          {smtp?.decryptFailed ? (
+            <p className="text-sm text-amber-700">
+              {isUr
+                ? 'محفوظ شدہ SMTP پاس ورڈ موجودہ انکرپشن کلید سے نہیں کھل سکا۔ براہِ کرم پاس ورڈ دوبارہ درج کر کے محفوظ کریں۔'
+                : 'Saved SMTP password could not be decrypted with the current encryption key. Please re-enter and save the password.'}
+            </p>
+          ) : null}
           {searchParams.smtpTest === 'ok' ? <p className="text-sm text-green-700">{isUr ? 'SMTP ٹیسٹ ای میل بھیج دی گئی۔' : 'SMTP test email sent successfully.'}</p> : null}
           {searchParams.runtimeSaved === '1' ? <p className="text-sm text-green-700">{isUr ? 'رن ٹائم ٹائم آؤٹ محفوظ ہو گیا۔' : 'Runtime timeout saved successfully.'}</p> : null}
           {searchParams.runtimeError ? <p className="text-sm text-red-600">{isUr ? 'رن ٹائم ٹائم آؤٹ غلط ہے۔' : 'Invalid runtime timeout value.'}</p> : null}

@@ -2,6 +2,14 @@ import nodemailer from 'nodemailer';
 import { prisma } from './prisma';
 import { decrypt } from './crypto';
 
+function safeDecrypt(value: string) {
+  try {
+    return { value: decrypt(value), failed: false };
+  } catch {
+    return { value: '', failed: true };
+  }
+}
+
 export async function getSmtpSettings() {
   type SmtpRow = { key: string; value: unknown; encrypted: boolean };
   const keys = [
@@ -21,14 +29,16 @@ export async function getSmtpSettings() {
     const legacy = await prisma.appSetting.findUnique({ where: { key: 'smtp' } });
     if (legacy) {
       const value = legacy.value as any;
+      const decryptedLegacyPassword = legacy.encrypted ? safeDecrypt(String(value.password || '')) : { value: String(value.password || ''), failed: false };
       return {
         host: String(value.host || ''),
         port: Number(value.port || 0),
         secure: Boolean(value.secure),
         username: String(value.username || ''),
-        password: legacy.encrypted ? decrypt(String(value.password || '')) : String(value.password || ''),
+        password: decryptedLegacyPassword.value,
         fromName: String(value.fromName || ''),
-        fromEmail: String(value.fromEmail || '')
+        fromEmail: String(value.fromEmail || ''),
+        decryptFailed: decryptedLegacyPassword.failed
       };
     }
   }
@@ -44,14 +54,16 @@ export async function getSmtpSettings() {
   if (!host || !port || !username || !passwordRow || !fromName || !fromEmail) return null;
 
   const rawPassword = String(passwordRow.value || '');
+  const decryptedPassword = passwordRow.encrypted ? safeDecrypt(rawPassword) : { value: rawPassword, failed: false };
   return {
     host: String(host),
     port: Number(port),
     secure: Boolean(secure),
     username: String(username),
-    password: passwordRow.encrypted ? decrypt(rawPassword) : rawPassword,
+    password: decryptedPassword.value,
     fromName: String(fromName),
-    fromEmail: String(fromEmail)
+    fromEmail: String(fromEmail),
+    decryptFailed: decryptedPassword.failed
   };
 }
 

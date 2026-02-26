@@ -26,6 +26,11 @@ const updateFullSchema = z.object({
   locale: z.string().default('en')
 });
 
+const deleteSchema = z.object({
+  userId: z.string().min(1),
+  locale: z.string().default('en')
+});
+
 export async function POST(req: Request) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: 'Invalid origin' }, { status: 403 });
 
@@ -66,6 +71,28 @@ export async function POST(req: Request) {
         ...(data.newPassword ? { passwordHash: await hashPassword(data.newPassword) } : {})
       }
     });
+    return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
+  }
+
+  if (action === 'delete') {
+    const data = deleteSchema.parse(form);
+    if (data.userId === admin.id) {
+      return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: data.userId }, select: { role: true } });
+    if (!target) {
+      return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
+    }
+
+    if (target.role === 'ADMIN') {
+      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+      if (adminCount <= 1) {
+        return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
+      }
+    }
+
+    await prisma.user.delete({ where: { id: data.userId } });
     return NextResponse.redirect(new URL(`/${data.locale}/admin?tab=users`, req.url), 303);
   }
 
