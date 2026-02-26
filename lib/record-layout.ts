@@ -51,6 +51,7 @@ export function remapImportedCategoriesToCurrentLayout(sourceCategories: SourceC
   }));
 
   const mappedByCategoryKey = new Map(mappedCategories.map((category) => [category.stableId, category] as const));
+  const customCategories: InitialCategory[] = [];
 
   sourceCategories.forEach((sourceCategory, categoryIndex) => {
     const templateCategoryKey = isTemplateCategoryKey(sourceCategory.stableId)
@@ -58,6 +59,17 @@ export function remapImportedCategoriesToCurrentLayout(sourceCategories: SourceC
       : findTemplateCategoryByNames(sourceCategory.type, sourceCategory.nameEn, sourceCategory.nameUr)?.key;
 
     if (!templateCategoryKey) {
+      customCategories.push({
+        stableId: sourceCategory.stableId || createCustomStableId('cat', `${categoryIndex}`),
+        nameEn: sourceCategory.nameEn,
+        nameUr: sourceCategory.nameUr,
+        type: sourceCategory.type,
+        items: sourceCategory.items.map((item, itemIndex) => ({
+          stableId: item.stableId || createCustomStableId('item', `${categoryIndex}-${itemIndex}`),
+          description: item.description,
+          amount: Number(item.amount) || 0
+        }))
+      });
       return;
     }
 
@@ -77,8 +89,13 @@ export function remapImportedCategoriesToCurrentLayout(sourceCategories: SourceC
           return;
         }
       }
+      targetCategory.items.push({
+        stableId: item.stableId || createCustomStableId('item', `${templateCategoryKey}-${categoryIndex}-${itemIndex}`),
+        description: item.description,
+        amount: Number(item.amount) || 0
+      });
     });
   });
 
-  return mappedCategories;
+  return [...mappedCategories, ...customCategories];
 }
