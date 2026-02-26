@@ -155,6 +155,49 @@ function createCustomStableId(prefix: 'cat' | 'item') {
   return `custom-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function buildCategoriesFromInitialData(initialData: RecordFormInitialData | undefined, isUr: boolean): Category[] {
+  if (initialData?.categories?.length) {
+    return initialData.categories.map((category, idx) => ({
+      id: `cat-${idx}-${category.type}`,
+      stableId: category.stableId || createCustomStableId('cat'),
+      nameEn: category.nameEn,
+      nameUr: category.nameUr,
+      type: category.type,
+      items: category.items.map((item) => {
+        const stableId = item.stableId || createCustomStableId('item');
+        return {
+          ...item,
+          stableId,
+          description: localizeSeededItemDescription(item, category, isUr)
+        };
+      }),
+      collapsed: false,
+      isCustom: isCustomCategoryName(category.nameEn, category.nameUr)
+    }));
+  }
+  return defaultCategoryTemplates.map((template, idx) => toCategory(template, idx, isUr));
+}
+
+function buildPayloadJson(
+  locale: string,
+  yearLabel: string,
+  calendarType: 'ISLAMIC' | 'GREGORIAN',
+  categories: Category[]
+) {
+  return JSON.stringify({
+    locale,
+    yearLabel,
+    calendarType,
+    categories: categories.map((category) => ({
+      stableId: category.stableId,
+      nameEn: category.nameEn,
+      nameUr: category.nameUr,
+      type: category.type,
+      items: category.items.map((item) => ({ stableId: item.stableId, description: item.description, amount: item.amount }))
+    }))
+  });
+}
+
 export function NewRecordForm({
   locale,
   currentUserId,
@@ -194,28 +237,7 @@ export function NewRecordForm({
   const [yearLabel, setYearLabel] = useState(initialData?.yearLabel || String(new Date().getFullYear()));
   const [calendarType, setCalendarType] = useState<'ISLAMIC' | 'GREGORIAN'>(initialData?.calendarType || 'ISLAMIC');
   const [saveWhenChangingSection, setSaveWhenChangingSection] = useState(true);
-  const [categories, setCategories] = useState<Category[]>(() => {
-    if (initialData?.categories?.length) {
-      return initialData.categories.map((category, idx) => ({
-        id: `cat-${idx}-${category.type}`,
-        stableId: category.stableId || createCustomStableId('cat'),
-        nameEn: category.nameEn,
-        nameUr: category.nameUr,
-        type: category.type,
-        items: category.items.map((item) => {
-          const stableId = item.stableId || createCustomStableId('item');
-          return {
-            ...item,
-            stableId,
-            description: localizeSeededItemDescription(item, category, isUr)
-          };
-        }),
-        collapsed: false,
-        isCustom: isCustomCategoryName(category.nameEn, category.nameUr)
-      }));
-    }
-    return defaultCategoryTemplates.map((template, idx) => toCategory(template, idx, isUr));
-  });
+  const [categories, setCategories] = useState<Category[]>(() => buildCategoriesFromInitialData(initialData, isUr));
 
   const categorySteps = useMemo(() => categories.map((category) => category.id), [categories]);
   const yearOptions = useMemo(() => {
@@ -238,18 +260,7 @@ export function NewRecordForm({
   }, [categories, mode, categorySteps, wizardStep]);
   const isEditMode = Boolean(initialData?.recordId && formAction);
   const savePreferenceKey = `za-save-on-section-change:${currentUserId}`;
-  const payloadJson = JSON.stringify({
-    locale,
-    yearLabel,
-    calendarType,
-    categories: categories.map((category) => ({
-      stableId: category.stableId,
-      nameEn: category.nameEn,
-      nameUr: category.nameUr,
-      type: category.type,
-      items: category.items.map((item) => ({ stableId: item.stableId, description: item.description, amount: item.amount }))
-    }))
-  });
+  const payloadJson = buildPayloadJson(locale, yearLabel, calendarType, categories);
   const [lastSavedPayloadJson, setLastSavedPayloadJson] = useState(payloadJson);
   const hasUnsavedChanges = payloadJson !== lastSavedPayloadJson;
   const duplicateYearRecord = useMemo(() => {
@@ -457,6 +468,22 @@ export function NewRecordForm({
       setDuplicateInfo(null);
     }
   }, [duplicateYearRecord, duplicateInfo, yearLabel]);
+
+  useEffect(() => {
+    const nextYearLabel = initialData?.yearLabel || String(new Date().getFullYear());
+    const nextCalendarType = initialData?.calendarType || 'ISLAMIC';
+    const nextCategories = buildCategoriesFromInitialData(initialData, isUr);
+
+    setYearLabel(nextYearLabel);
+    setCalendarType(nextCalendarType);
+    setCategories(nextCategories);
+    setWizardStep(0);
+    setMode('WIZARD');
+    setIsCreating(false);
+    setSaveFeedback(null);
+    setShowClosePrompt(false);
+    setLastSavedPayloadJson(buildPayloadJson(locale, nextYearLabel, nextCalendarType, nextCategories));
+  }, [initialData, isUr, locale]);
 
   useEffect(() => {
     setShowImportPrompt(Boolean(promptImportFromId));
