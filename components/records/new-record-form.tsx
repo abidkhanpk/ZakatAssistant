@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useEffect, useMemo, useRef, useState, type WheelEvent } from 'react';
+import { useEffect, useMemo, useState, type WheelEvent } from 'react';
 import {
   defaultCategoryTemplates,
   findTemplateCategoryByNames,
@@ -222,7 +222,6 @@ export function NewRecordForm({
   existingYearRecords?: ExistingYearRecord[];
 }) {
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement | null>(null);
   const isUr = locale === 'ur';
   const [showImportPrompt, setShowImportPrompt] = useState(Boolean(promptImportFromId));
   const [importPromptAction, setImportPromptAction] = useState<'IMPORT' | 'FRESH' | 'CANCEL' | null>(null);
@@ -235,6 +234,8 @@ export function NewRecordForm({
   const [duplicateInfo, setDuplicateInfo] = useState<{ yearLabel: string; recordId: string } | null>(
     duplicateYear && existingRecordId ? { yearLabel: duplicateYear, recordId: existingRecordId } : null
   );
+  const [activeRecordId, setActiveRecordId] = useState(initialData?.recordId);
+  const [currentFormAction, setCurrentFormAction] = useState(formAction || '/api/records');
   const [yearLabel, setYearLabel] = useState(initialData?.yearLabel || String(new Date().getFullYear()));
   const [calendarType, setCalendarType] = useState<'ISLAMIC' | 'GREGORIAN'>(initialData?.calendarType || 'ISLAMIC');
   const [saveWhenChangingSection, setSaveWhenChangingSection] = useState(true);
@@ -259,7 +260,7 @@ export function NewRecordForm({
     const currentId = categorySteps[wizardStep];
     return categories.filter((category) => category.id === currentId);
   }, [categories, mode, categorySteps, wizardStep]);
-  const isEditMode = Boolean(initialData?.recordId && formAction);
+  const isEditMode = Boolean(activeRecordId);
   const savePreferenceKey = `za-save-on-section-change:${currentUserId}`;
   const payloadJson = buildPayloadJson(locale, yearLabel, calendarType, categories);
   const [lastSavedPayloadJson, setLastSavedPayloadJson] = useState(payloadJson);
@@ -268,9 +269,9 @@ export function NewRecordForm({
     const targetYear = yearLabel.trim();
     if (!targetYear) return null;
     return (existingYearRecords || []).find(
-      (entry) => entry.id !== initialData?.recordId && entry.yearLabel.trim() === targetYear
+      (entry) => entry.id !== activeRecordId && entry.yearLabel.trim() === targetYear
     ) || null;
-  }, [existingYearRecords, initialData?.recordId, yearLabel]);
+  }, [existingYearRecords, activeRecordId, yearLabel]);
 
   const totals = useMemo(() => {
     const totalAssets = categories.filter((c) => c.type === 'ASSET').flatMap((c) => c.items).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -374,7 +375,7 @@ export function NewRecordForm({
   }
 
   async function persistRecord(stayOnPage: boolean) {
-    if (!isEditMode || !formAction || isSaving) return false;
+    if (!isEditMode || !currentFormAction || isSaving) return false;
     if (duplicateYearRecord) {
       setDuplicateInfo({ yearLabel: duplicateYearRecord.yearLabel.trim(), recordId: duplicateYearRecord.id });
       return false;
@@ -389,7 +390,7 @@ export function NewRecordForm({
       body.set('intent', stayOnPage ? 'save' : 'update');
       body.set('payload', payloadJson);
 
-      const response = await fetch(formAction, { method: 'POST', body });
+      const response = await fetch(currentFormAction, { method: 'POST', body });
       if (!response.ok) {
         if (response.status === 409) {
           const payload = (await response.json().catch(() => null)) as { error?: string; yearLabel?: string; existingRecordId?: string } | null;
@@ -418,14 +419,59 @@ export function NewRecordForm({
     await persistRecord(true);
   }
 
+  async function persistNewRecord() {
+    if (isSaving || isCreating) return false;
+    if (duplicateYearRecord) {
+      setDuplicateInfo({ yearLabel: duplicateYearRecord.yearLabel.trim(), recordId: duplicateYearRecord.id });
+      return false;
+    }
+    setIsSaving(true);
+    setSaveFeedback(null);
+    setDuplicateInfo(null);
+    try {
+      const body = new FormData();
+      body.set('csrfToken', csrfToken);
+      body.set('locale', locale);
+      body.set('intent', 'save');
+      body.set('payload', payloadJson);
+
+      const response = await fetch('/api/records', { method: 'POST', body });
+      if (!response.ok) {
+        if (response.status === 409) {
+          const payload = (await response.json().catch(() => null)) as { error?: string; yearLabel?: string; existingRecordId?: string } | null;
+          if (payload?.error === 'DUPLICATE_YEAR' && payload.yearLabel && payload.existingRecordId) {
+            setDuplicateInfo({ yearLabel: payload.yearLabel, recordId: payload.existingRecordId });
+            return false;
+          }
+        }
+        throw new Error(`Save failed (${response.status})`);
+      }
+
+      const payload = (await response.json()) as { recordId: string };
+      const nextRecordId = payload.recordId;
+      if (!nextRecordId) return false;
+      setActiveRecordId(nextRecordId);
+      setCurrentFormAction(`/api/records/${nextRecordId}`);
+      setLastSavedPayloadJson(payloadJson);
+      setIsCreating(false);
+      setSaveFeedback(isUr ? 'تبدیلیاں محفوظ ہو گئیں۔' : 'Changes saved.');
+      return nextRecordId;
+    } catch {
+      setSaveFeedback(isUr ? 'محفوظ نہیں ہو سکا، دوبارہ کوشش کریں۔' : 'Could not save. Please try again.');
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function handleCloseAction() {
     if (!isEditMode) {
       setShowClosePrompt(true);
       return;
     }
-    if (!initialData?.recordId) return;
+    if (!activeRecordId) return;
     if (!hasUnsavedChanges) {
-      router.push(`/${locale}/app/records/${initialData.recordId}?year=${encodeURIComponent(yearLabel)}`);
+      router.push(`/${locale}/app/records/${activeRecordId}?year=${encodeURIComponent(yearLabel)}`);
       return;
     }
     setShowClosePrompt(true);
@@ -433,14 +479,17 @@ export function NewRecordForm({
 
   async function handleSaveAndClose() {
     if (!isEditMode) {
-      formRef.current?.requestSubmit();
+      const createdRecordId = await persistNewRecord();
+      if (!createdRecordId) return;
+      setShowClosePrompt(false);
+      router.push(`/${locale}/app/records/${createdRecordId}?year=${encodeURIComponent(yearLabel)}`);
       return;
     }
-    if (!initialData?.recordId) return;
+    if (!activeRecordId) return;
     const ok = await persistRecord(true);
     if (!ok) return;
     setShowClosePrompt(false);
-    router.push(`/${locale}/app/records/${initialData.recordId}?year=${encodeURIComponent(yearLabel)}`);
+    router.push(`/${locale}/app/records/${activeRecordId}?year=${encodeURIComponent(yearLabel)}`);
   }
 
   function handleDiscardAndClose() {
@@ -449,17 +498,17 @@ export function NewRecordForm({
       router.push(`/${locale}/app/records`);
       return;
     }
-    if (!initialData?.recordId) return;
+    if (!activeRecordId) return;
     setShowClosePrompt(false);
-    router.push(`/${locale}/app/records/${initialData.recordId}?year=${encodeURIComponent(yearLabel)}`);
+    router.push(`/${locale}/app/records/${activeRecordId}?year=${encodeURIComponent(yearLabel)}`);
   }
 
   async function handleStepNavigation(direction: 'PREV' | 'NEXT') {
     const nextStep = direction === 'PREV' ? Math.max(0, wizardStep - 1) : Math.min(categorySteps.length - 1, wizardStep + 1);
     if (nextStep === wizardStep) return;
 
-    if (saveWhenChangingSection && isEditMode && hasUnsavedChanges) {
-      const ok = await persistRecord(true);
+    if (saveWhenChangingSection && hasUnsavedChanges) {
+      const ok = isEditMode ? await persistRecord(true) : await persistNewRecord();
       if (!ok) return;
     }
     setWizardStep(nextStep);
@@ -496,8 +545,10 @@ export function NewRecordForm({
     setIsCreating(false);
     setSaveFeedback(null);
     setShowClosePrompt(false);
+    setActiveRecordId(initialData?.recordId);
+    setCurrentFormAction(formAction || '/api/records');
     setLastSavedPayloadJson(buildPayloadJson(locale, nextYearLabel, nextCalendarType, nextCategories));
-  }, [initialData, isUr, locale]);
+  }, [initialData, isUr, locale, formAction]);
 
   useEffect(() => {
     setShowImportPrompt(Boolean(promptImportFromId));
@@ -601,11 +652,10 @@ export function NewRecordForm({
       ) : null}
 
       <motion.form
-        ref={formRef}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         method="post"
-        action={formAction || '/api/records'}
+        action={currentFormAction}
         className="space-y-4"
         onSubmit={(e) => {
           if (duplicateYearRecord) {

@@ -41,6 +41,7 @@ export async function POST(req: Request) {
 
   const formData = await req.formData();
   if (!hasValidCsrfToken(req, formData)) return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
+  const intent = String(formData.get('intent') || '');
 
   const form = Object.fromEntries(formData);
   const rawPayload = JSON.parse(String(form.payload || '{}'));
@@ -116,6 +117,12 @@ export async function POST(req: Request) {
     );
 
     if (record.duplicateId) {
+      if (intent === 'save') {
+        return NextResponse.json(
+          { error: 'DUPLICATE_YEAR', yearLabel: normalizedYearLabel, existingRecordId: record.duplicateId },
+          { status: 409 }
+        );
+      }
       return NextResponse.redirect(
         new URL(
           `/${payload.locale}/app/records/new?duplicateYear=${encodeURIComponent(normalizedYearLabel)}&existingRecordId=${encodeURIComponent(record.duplicateId)}`,
@@ -125,6 +132,9 @@ export async function POST(req: Request) {
       );
     }
 
+    if (intent === 'save') {
+      return NextResponse.json({ ok: true, recordId: record.createdId, yearLabel: normalizedYearLabel });
+    }
     return NextResponse.redirect(
       new URL(`/${payload.locale}/app/records/${record.createdId}?year=${encodeURIComponent(normalizedYearLabel)}`, req.url),
       303
@@ -137,6 +147,12 @@ export async function POST(req: Request) {
       })
     ).find((entry) => entry.yearLabel.trim() === normalizedYearLabel);
     if (existingForYear) {
+      if (intent === 'save') {
+        return NextResponse.json(
+          { error: 'DUPLICATE_YEAR', yearLabel: normalizedYearLabel, existingRecordId: existingForYear.id },
+          { status: 409 }
+        );
+      }
       return NextResponse.redirect(
         new URL(
           `/${payload.locale}/app/records/new?duplicateYear=${encodeURIComponent(normalizedYearLabel)}&existingRecordId=${encodeURIComponent(existingForYear.id)}`,
