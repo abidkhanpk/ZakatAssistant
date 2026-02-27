@@ -48,15 +48,16 @@ export async function POST(req: Request) {
   try {
     const form = Object.fromEntries(formData);
     const rawPayload = JSON.parse(String(form.payload || '{}'));
-    payload = payloadSchema.parse({
+    const parsedPayload = payloadSchema.parse({
       ...rawPayload,
       locale: String(form.locale || rawPayload.locale || 'en')
     });
-    normalizedYearLabel = payload.yearLabel.trim();
+    payload = parsedPayload;
+    normalizedYearLabel = parsedPayload.yearLabel.trim();
 
-    const assets = payload.categories.filter((c) => c.type === 'ASSET');
-    const liabilities = payload.categories.filter((c) => c.type === 'LIABILITY');
-    const totals = calculateZakat({ calendarType: payload.calendarType, assets, liabilities });
+    const assets = parsedPayload.categories.filter((c) => c.type === 'ASSET');
+    const liabilities = parsedPayload.categories.filter((c) => c.type === 'LIABILITY');
+    const totals = calculateZakat({ calendarType: parsedPayload.calendarType, assets, liabilities });
     const transactionTimeoutMs = await getRecordMutationTimeoutMs();
 
     const record = await prisma.$transaction(async (tx) => {
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
             userId: user.id,
             yearLabel: normalizedYearLabel,
             calculationDate: new Date(),
-            calendarType: payload.calendarType,
+            calendarType: parsedPayload.calendarType,
             zakatRate: totals.zakatRate,
             totalAssets: totals.totalAssets,
             totalDeductions: totals.totalDeductions,
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
           }
         });
 
-        for (const [index, cat] of payload.categories.entries()) {
+        for (const [index, cat] of parsedPayload.categories.entries()) {
           const categoryStableId = ensureCategoryStableId(cat, index);
           const category = await tx.category.create({
             data: {
@@ -125,7 +126,7 @@ export async function POST(req: Request) {
       }
       return NextResponse.redirect(
         new URL(
-          `/${payload.locale}/app/records/new?duplicateYear=${encodeURIComponent(normalizedYearLabel)}&existingRecordId=${encodeURIComponent(record.duplicateId)}`,
+          `/${parsedPayload.locale}/app/records/new?duplicateYear=${encodeURIComponent(normalizedYearLabel)}&existingRecordId=${encodeURIComponent(record.duplicateId)}`,
           req.url
         ),
         303
@@ -136,7 +137,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, recordId: record.createdId, yearLabel: normalizedYearLabel });
     }
     return NextResponse.redirect(
-      new URL(`/${payload.locale}/app/records/${record.createdId}?year=${encodeURIComponent(normalizedYearLabel)}`, req.url),
+      new URL(`/${parsedPayload.locale}/app/records/${record.createdId}?year=${encodeURIComponent(normalizedYearLabel)}`, req.url),
       303
     );
   } catch (error) {
