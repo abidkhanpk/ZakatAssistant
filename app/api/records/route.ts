@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -7,6 +6,7 @@ import { calculateZakat } from '@/lib/zakat';
 import { isSameOrigin } from '@/lib/security';
 import { hasValidCsrfToken } from '@/lib/csrf';
 import { ensureCategoryStableId, ensureItemStableId } from '@/lib/stable-layout-ids';
+import { getRecordMutationTimeoutMs } from '@/lib/runtime-settings';
 
 export const maxDuration = 300;
 
@@ -42,22 +42,24 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   if (!hasValidCsrfToken(req, formData)) return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
   const intent = String(formData.get('intent') || '');
-
-  const form = Object.fromEntries(formData);
-  const rawPayload = JSON.parse(String(form.payload || '{}'));
-  const payload = payloadSchema.parse({
-    ...rawPayload,
-    locale: String(form.locale || rawPayload.locale || 'en')
-  });
-  const normalizedYearLabel = payload.yearLabel.trim();
-
-  const assets = payload.categories.filter((c) => c.type === 'ASSET');
-  const liabilities = payload.categories.filter((c) => c.type === 'LIABILITY');
-  const totals = calculateZakat({ calendarType: payload.calendarType, assets, liabilities });
+  let payload: z.infer<typeof payloadSchema> | null = null;
+  let normalizedYearLabel = '';
 
   try {
-    const record = await prisma.$transaction(
-      async (tx) => {
+    const form = Object.fromEntries(formData);
+    const rawPayload = JSON.parse(String(form.payload || '{}'));
+    payload = payloadSchema.parse({
+      ...rawPayload,
+      locale: String(form.locale || rawPayload.locale || 'en')
+    });
+    normalizedYearLabel = payload.yearLabel.trim();
+
+    const assets = payload.categories.filter((c) => c.type === 'ASSET');
+    const liabilities = payload.categories.filter((c) => c.type === 'LIABILITY');
+    const totals = calculateZakat({ calendarType: payload.calendarType, assets, liabilities });
+    const transactionTimeoutMs = await getRecordMutationTimeoutMs();
+
+    const record = await prisma.$transaction(async (tx) => {
         const existingForYear = (
           await tx.zakatRecord.findMany({
             where: { userId: user.id },
@@ -112,9 +114,7 @@ export async function POST(req: Request) {
         }
 
         return { duplicateId: null as string | null, createdId: created.id };
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-    );
+      }, { timeout: transactionTimeoutMs });
 
     if (record.duplicateId) {
       if (intent === 'save') {
@@ -139,7 +139,20 @@ export async function POST(req: Request) {
       new URL(`/${payload.locale}/app/records/${record.createdId}?year=${encodeURIComponent(normalizedYearLabel)}`, req.url),
       303
     );
-  } catch {
+  } catch (error) {
+    if (intent === 'save') {
+      if (error instanceof SyntaxError) {
+        return NextResponse.json({ error: 'INVALID_JSON' }, { status: 400 });
+      }
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({ error: 'INVALID_PAYLOAD' }, { status: 400 });
+      }
+      const details = process.env.NODE_ENV !== 'production' && error instanceof Error ? error.message : undefined;
+      return NextResponse.json({ error: 'CREATE_FAILED', details }, { status: 500 });
+    }
+    if (!payload) {
+      throw error;
+    }
     const existingForYear = (
       await prisma.zakatRecord.findMany({
         where: { userId: user.id },
@@ -155,12 +168,12 @@ export async function POST(req: Request) {
       }
       return NextResponse.redirect(
         new URL(
-          `/${payload.locale}/app/records/new?duplicateYear=${encodeURIComponent(normalizedYearLabel)}&existingRecordId=${encodeURIComponent(existingForYear.id)}`,
+          `/${payload.locale}/app/records/new?duplicateYear=${encodeURIComponent(normalizedYearLabel || payload.yearLabel)}&existingRecordId=${encodeURIComponent(existingForYear.id)}`,
           req.url
         ),
         303
       );
     }
-    throw new Error('Failed to create record');
+    throw error;
   }
 }
