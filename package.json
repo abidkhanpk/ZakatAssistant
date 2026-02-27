@@ -1,6 +1,6 @@
 {
   "name": "zakatassistant",
-  "version": "1.0.73",
+  "version": "1.0.76",
   "private": true,
   "scripts": {
     "predev": "prisma generate",

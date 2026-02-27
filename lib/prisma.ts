@@ -32,19 +32,18 @@ if (databaseUrl) {
   }
 }
 
+// Prisma v7 with adapter types can infer an overly narrow client options type.
+const prismaClientOptions = (
+  adapter
+    ? {
+        adapter
+      }
+    : {
+        datasourceUrl: databaseUrl || process.env.DATABASE_URL
+      }
+) as ConstructorParameters<typeof PrismaClient>[0];
+
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient(
-    adapter
-      ? {
-          adapter
-        }
-      : {
-          datasources: {
-            db: {
-              url: databaseUrl || process.env.DATABASE_URL
-            }
-          }
-        }
-  );
+  new PrismaClient(prismaClientOptions);
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
