@@ -238,7 +238,17 @@ export function NewRecordForm({
   const [currentFormAction, setCurrentFormAction] = useState(formAction || '/api/records');
   const [yearLabel, setYearLabel] = useState(initialData?.yearLabel || String(new Date().getFullYear()));
   const [calendarType, setCalendarType] = useState<'ISLAMIC' | 'GREGORIAN'>(initialData?.calendarType || 'ISLAMIC');
-  const [saveWhenChangingSection, setSaveWhenChangingSection] = useState(true);
+  const savePreferenceKey = `za-save-on-section-change:${currentUserId}`;
+  const [saveWhenChangingSection, setSaveWhenChangingSection] = useState(() => {
+    try {
+      const saved = localStorage.getItem(savePreferenceKey);
+      if (saved === '0') return false;
+      if (saved === '1') return true;
+    } catch {
+      // ignore storage access issues
+    }
+    return true;
+  });
   const [categories, setCategories] = useState<Category[]>(() => buildCategoriesFromInitialData(initialData, isUr));
 
   const categorySteps = useMemo(() => categories.map((category) => category.id), [categories]);
@@ -261,7 +271,6 @@ export function NewRecordForm({
     return categories.filter((category) => category.id === currentId);
   }, [categories, mode, categorySteps, wizardStep]);
   const isEditMode = Boolean(activeRecordId);
-  const savePreferenceKey = `za-save-on-section-change:${currentUserId}`;
   const payloadJson = buildPayloadJson(locale, yearLabel, calendarType, categories);
   const [lastSavedPayloadJson, setLastSavedPayloadJson] = useState(payloadJson);
   const hasUnsavedChanges = payloadJson !== lastSavedPayloadJson;
@@ -555,24 +564,27 @@ export function NewRecordForm({
   }, [promptImportFromId]);
 
   useEffect(() => {
-    if (!isEditMode) return;
     try {
       const saved = localStorage.getItem(savePreferenceKey);
-      if (saved === '0') setSaveWhenChangingSection(false);
-      if (saved === '1') setSaveWhenChangingSection(true);
+      if (saved === '0') {
+        setSaveWhenChangingSection(false);
+        return;
+      }
+      if (saved === '1') {
+        setSaveWhenChangingSection(true);
+      }
     } catch {
       // ignore storage access issues
     }
-  }, [isEditMode, savePreferenceKey]);
+  }, [savePreferenceKey]);
 
   useEffect(() => {
-    if (!isEditMode) return;
     try {
       localStorage.setItem(savePreferenceKey, saveWhenChangingSection ? '1' : '0');
     } catch {
       // ignore storage access issues
     }
-  }, [isEditMode, savePreferenceKey, saveWhenChangingSection]);
+  }, [savePreferenceKey, saveWhenChangingSection]);
 
   useEffect(() => {
     if (!showImportPrompt && importPromptAction) {
