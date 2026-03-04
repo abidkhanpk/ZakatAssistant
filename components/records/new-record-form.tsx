@@ -198,6 +198,42 @@ function buildPayloadJson(
   });
 }
 
+function formatAmountForDisplay(value: number) {
+  if (!Number.isFinite(value)) return '0';
+  return value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function normalizeAmountTypingInput(raw: string) {
+  const cleaned = raw.replace(/,/g, '').replace(/[^0-9.]/g, '');
+  if (!cleaned) return '';
+
+  let hasDot = false;
+  let normalized = '';
+  for (const char of cleaned) {
+    if (char === '.') {
+      if (hasDot) continue;
+      hasDot = true;
+      normalized += '.';
+      continue;
+    }
+    normalized += char;
+  }
+
+  const [intRaw, fracRaw = ''] = normalized.split('.');
+  const intDigits = (intRaw || '0').replace(/^0+(?=\d)/, '');
+  const intFormatted = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  if (hasDot) {
+    return `${intFormatted || '0'}.${fracRaw.slice(0, 2)}`;
+  }
+  return intFormatted || '0';
+}
+
+function parseAmountFromFormatted(value: string) {
+  const parsed = Number(value.replace(/,/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function NewRecordForm({
   locale,
   currentUserId,
@@ -250,6 +286,7 @@ export function NewRecordForm({
     return true;
   });
   const [categories, setCategories] = useState<Category[]>(() => buildCategoriesFromInitialData(initialData, isUr));
+  const [amountDrafts, setAmountDrafts] = useState<Record<string, string>>({});
 
   const categorySteps = useMemo(() => categories.map((category) => category.id), [categories]);
   const yearOptions = useMemo(() => {
@@ -339,6 +376,39 @@ export function NewRecordForm({
           : category
       )
     );
+  }
+
+  function getAmountInputKey(categoryIndex: number, itemIndex: number) {
+    const category = categories[categoryIndex];
+    const item = category?.items[itemIndex];
+    return `${category?.stableId || category?.id || categoryIndex}:${item?.stableId || itemIndex}`;
+  }
+
+  function updateAmountDraft(categoryIndex: number, itemIndex: number, rawValue: string) {
+    const key = getAmountInputKey(categoryIndex, itemIndex);
+    const nextDraft = normalizeAmountTypingInput(rawValue);
+    setAmountDrafts((prev) => ({ ...prev, [key]: nextDraft }));
+    updateItem(categoryIndex, itemIndex, { amount: parseAmountFromFormatted(nextDraft) });
+  }
+
+  function clearAmountDraft(categoryIndex: number, itemIndex: number) {
+    const key = getAmountInputKey(categoryIndex, itemIndex);
+    setAmountDrafts((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  async function navigateToStep(nextStep: number) {
+    if (nextStep < 0 || nextStep >= categorySteps.length || nextStep === wizardStep) return;
+
+    if (saveWhenChangingSection && hasUnsavedChanges) {
+      const ok = isEditMode ? await persistRecord(true) : await persistNewRecord();
+      if (!ok) return;
+    }
+    setWizardStep(nextStep);
   }
 
   function removeCategory(categoryIndex: number) {
@@ -514,13 +584,7 @@ export function NewRecordForm({
 
   async function handleStepNavigation(direction: 'PREV' | 'NEXT') {
     const nextStep = direction === 'PREV' ? Math.max(0, wizardStep - 1) : Math.min(categorySteps.length - 1, wizardStep + 1);
-    if (nextStep === wizardStep) return;
-
-    if (saveWhenChangingSection && hasUnsavedChanges) {
-      const ok = isEditMode ? await persistRecord(true) : await persistNewRecord();
-      if (!ok) return;
-    }
-    setWizardStep(nextStep);
+    await navigateToStep(nextStep);
   }
 
   function preventWheelChange(e: WheelEvent<HTMLInputElement>) {
@@ -556,6 +620,7 @@ export function NewRecordForm({
     setShowClosePrompt(false);
     setActiveRecordId(initialData?.recordId);
     setCurrentFormAction(formAction || '/api/records');
+    setAmountDrafts({});
     setLastSavedPayloadJson(buildPayloadJson(locale, nextYearLabel, nextCalendarType, nextCategories));
   }, [initialData, isUr, locale, formAction]);
 
@@ -760,6 +825,26 @@ export function NewRecordForm({
                 </button>
               </div>
             </div>
+            <div className="mt-3 overflow-x-auto pb-1">
+              <div className="flex min-w-max gap-2 md:flex-wrap">
+                {categories.map((category, stepIndex) => {
+                  const isActiveStep = stepIndex === wizardStep;
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      className={`rounded border px-3 py-1 text-xs md:text-sm ${
+                        isActiveStep ? 'border-brand bg-brand text-white' : 'border-brand/30 bg-white text-slate-700 hover:bg-brand/5'
+                      }`}
+                      onClick={() => navigateToStep(stepIndex)}
+                      disabled={isSaving}
+                    >
+                      {stepIndex + 1}. {isUr ? category.nameUr : category.nameEn}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -808,12 +893,13 @@ export function NewRecordForm({
                       </td>
                       <td className="p-2">
                         <input
-                          type="number"
-                          step="0.01"
+                          type="text"
+                          inputMode="decimal"
                           className="w-full rounded border p-2"
-                          value={item.amount}
+                          value={amountDrafts[getAmountInputKey(categoryIndex, itemIndex)] ?? formatAmountForDisplay(item.amount)}
                           onWheel={preventWheelChange}
-                          onChange={(e) => updateItem(categoryIndex, itemIndex, { amount: Number(e.target.value || 0) })}
+                          onChange={(e) => updateAmountDraft(categoryIndex, itemIndex, e.target.value)}
+                          onBlur={() => clearAmountDraft(categoryIndex, itemIndex)}
                           placeholder={isUr ? 'رقم' : 'Amount'}
                         />
                       </td>
@@ -896,7 +982,7 @@ export function NewRecordForm({
                     {category.items.map((item, itemIndex) => (
                       <tr key={`${category.id}-item-${itemIndex}`} className="border-b">
                         <td className="p-2"><input className="w-full rounded border p-2" value={item.description} onChange={(e) => updateItem(categoryIndex, itemIndex, { description: e.target.value })} placeholder={isUr ? 'تفصیل' : 'Description'} /></td>
-                        <td className="p-2"><input type="number" step="0.01" className="w-full rounded border p-2" value={item.amount} onWheel={preventWheelChange} onChange={(e) => updateItem(categoryIndex, itemIndex, { amount: Number(e.target.value || 0) })} placeholder={isUr ? 'رقم' : 'Amount'} /></td>
+                        <td className="p-2"><input type="text" inputMode="decimal" className="w-full rounded border p-2" value={amountDrafts[getAmountInputKey(categoryIndex, itemIndex)] ?? formatAmountForDisplay(item.amount)} onWheel={preventWheelChange} onChange={(e) => updateAmountDraft(categoryIndex, itemIndex, e.target.value)} onBlur={() => clearAmountDraft(categoryIndex, itemIndex)} placeholder={isUr ? 'رقم' : 'Amount'} /></td>
                         <td className="p-2">
                           <div className="flex flex-wrap gap-2">
                             <button

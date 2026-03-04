@@ -56,6 +56,13 @@ export default async function RecordDetails({
           >
             {isUr ? 'ریکارڈ میں ترمیم کریں' : 'Edit record'}
           </Link>
+          <Link
+            className="inline-block rounded border px-3 py-2"
+            prefetch={false}
+            href={`/${params.locale}/app/records/new?importFrom=${record.id}`}
+          >
+            {isUr ? 'اس ریکارڈ سے نیا بنائیں' : 'Import Into New Record'}
+          </Link>
           <form method="post" action={`/api/records/${record.id}`}>
             <CsrfInput />
             <input type="hidden" name="locale" value={params.locale} />
