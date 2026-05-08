@@ -26,7 +26,7 @@ function TabLink({ locale, tab, activeTab, label }: { locale: string; tab: Tab; 
   );
 }
 
-export default async function AdminPage({ params, searchParams }: { params: { locale: string }; searchParams: { tab?: string; smtpError?: string; smtpTest?: string; runtimeSaved?: string; runtimeError?: string } }) {
+export default async function AdminPage({ params, searchParams }: { params: { locale: string }; searchParams: { tab?: string; smtpError?: string; smtpErrorMessage?: string; smtpTest?: string; runtimeSaved?: string; runtimeError?: string } }) {
   const admin = await getCurrentUser();
   if (!admin) redirect(`/${params.locale}/login`);
   if (admin.role !== 'ADMIN') redirect(`/${params.locale}/app`);
@@ -110,7 +110,20 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
 
       {activeTab === 'settings' ? (
         <>
-          {searchParams.smtpError ? <p className="text-sm text-red-600">{isUr ? 'SMTP خرابی' : 'SMTP error'}</p> : null}
+          {searchParams.smtpError ? (
+            <p className="text-sm text-red-600">
+              {searchParams.smtpError === 'password-required'
+                ? (isUr ? 'SMTP پاس ورڈ درج کریں۔' : 'SMTP password is required.')
+                : searchParams.smtpError === 'invalid-settings'
+                  ? (isUr ? 'SMTP سیٹنگز نامکمل یا غلط ہیں۔' : 'SMTP settings are incomplete or invalid.')
+                  : searchParams.smtpError === 'invalid-test-recipient'
+                    ? (isUr ? 'ٹیسٹ ای میل کے لئے درست ای میل پتہ درج کریں۔' : 'Enter a valid email address for the test email.')
+                    : searchParams.smtpError === 'smtp-connection-failed'
+                      ? (isUr ? 'SMTP کنکشن ناکام ہو گیا۔' : 'SMTP connection failed.')
+                      : (isUr ? 'SMTP ٹیسٹ ناکام ہو گیا۔' : 'SMTP test failed.')}
+              {searchParams.smtpErrorMessage ? ` ${searchParams.smtpErrorMessage}` : ''}
+            </p>
+          ) : null}
           {smtp?.decryptFailed ? (
             <p className="text-sm text-amber-700">
               {isUr
@@ -154,12 +167,38 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
             <input type="hidden" name="locale" value={params.locale} />
             <input name="host" className="rounded border p-2" placeholder="Host" required defaultValue={smtp?.host || ''} />
             <input name="port" type="number" className="rounded border p-2" placeholder="Port" required defaultValue={smtp?.port || 587} />
-            <label className="flex items-center gap-2 rounded border p-2"><input name="secure" type="checkbox" defaultChecked={!!smtp?.secure} /> Secure</label>
+            <label className="rounded border p-2">
+              <span className="mb-1 block text-sm text-slate-600">{isUr ? 'سیکیورٹی پروٹوکول' : 'Security protocol'}</span>
+              <select
+                name="security"
+                className="w-full rounded border p-2"
+                defaultValue={smtp?.security || (smtp?.secure ? 'ssl' : 'tls')}
+              >
+                <option value="tls">TLS (STARTTLS / 587)</option>
+                <option value="ssl">SSL (Implicit TLS / 465)</option>
+              </select>
+            </label>
             <input name="username" className="rounded border p-2" placeholder={isUr ? 'یوزرنیم' : 'Username'} required defaultValue={smtp?.username || ''} />
             <input name="password" type="password" className="rounded border p-2" placeholder={smtp?.password ? (isUr ? 'محفوظ پاس ورڈ (خالی چھوڑیں)' : 'Saved password (leave blank to keep)') : (isUr ? 'پاس ورڈ' : 'Password')} />
             <input name="fromName" className="rounded border p-2" placeholder={isUr ? 'بھیجنے والا نام' : 'From name'} required defaultValue={smtp?.fromName || ''} />
             <input name="fromEmail" type="email" className="rounded border p-2" placeholder="From email" required defaultValue={smtp?.fromEmail || ''} />
-            <button className="rounded bg-brand p-2 text-white md:col-span-2">{isUr ? 'SMTP محفوظ کریں' : 'Save SMTP Settings'}</button>
+            <input
+              name="to"
+              type="email"
+              className="rounded border p-2 md:col-span-2"
+              placeholder={isUr ? 'ٹیسٹ ای میل وصول کنندہ (اختیاری)' : 'Test email recipient (optional)'}
+              defaultValue={admin.email}
+            />
+            <div className="flex flex-wrap gap-2 md:col-span-2">
+              <button className="rounded bg-brand px-3 py-2 text-white">{isUr ? 'SMTP محفوظ کریں' : 'Save SMTP Settings'}</button>
+              <button
+                className="rounded border px-3 py-2"
+                type="submit"
+                formAction="/api/admin/settings/smtp?test=1"
+              >
+                {isUr ? 'ٹیسٹ ای میل بھیجیں' : 'Send Test Email'}
+              </button>
+            </div>
           </form>
         </>
       ) : null}
