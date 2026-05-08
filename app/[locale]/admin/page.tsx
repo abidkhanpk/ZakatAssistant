@@ -166,18 +166,17 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
             <CsrfInput />
             <input type="hidden" name="locale" value={params.locale} />
             <input name="host" className="rounded border p-2" placeholder="Host" required defaultValue={smtp?.host || ''} />
-            <input name="port" type="number" className="rounded border p-2" placeholder="Port" required defaultValue={smtp?.port || 587} />
-            <label className="rounded border p-2">
-              <span className="mb-1 block text-sm text-slate-600">{isUr ? 'سیکیورٹی پروٹوکول' : 'Security protocol'}</span>
+            <div className="flex gap-2">
               <select
                 name="security"
-                className="w-full rounded border p-2"
+                className="w-[72%] rounded border p-2"
                 defaultValue={smtp?.security || (smtp?.secure ? 'ssl' : 'tls')}
               >
                 <option value="tls">TLS (STARTTLS / 587)</option>
                 <option value="ssl">SSL (Implicit TLS / 465)</option>
               </select>
-            </label>
+              <input name="port" type="number" className="w-[28%] rounded border p-2" placeholder="Port" required defaultValue={smtp?.port || 587} />
+            </div>
             <input name="username" className="rounded border p-2" placeholder={isUr ? 'یوزرنیم' : 'Username'} required defaultValue={smtp?.username || ''} />
             <input name="password" type="password" className="rounded border p-2" placeholder={smtp?.password ? (isUr ? 'محفوظ پاس ورڈ (خالی چھوڑیں)' : 'Saved password (leave blank to keep)') : (isUr ? 'پاس ورڈ' : 'Password')} />
             <input name="fromName" className="rounded border p-2" placeholder={isUr ? 'بھیجنے والا نام' : 'From name'} required defaultValue={smtp?.fromName || ''} />
