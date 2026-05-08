@@ -48,7 +48,8 @@ export async function POST(req: Request) {
   if (!hasValidCsrfToken(req, formData)) return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
 
   const form = Object.fromEntries(formData);
-  const action = String(form.action || 'create');
+  const explicitAction = typeof form.action === 'string' ? form.action : '';
+  const action = explicitAction || (typeof form.userId === 'string' && form.userId ? 'update-full' : 'create');
   const locale = typeof form.locale === 'string' && form.locale ? form.locale : 'en';
 
   try {

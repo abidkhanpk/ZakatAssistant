@@ -99,6 +99,7 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
                     <td className="p-2" colSpan={7}>
                       <form className="grid gap-2 md:grid-cols-7" method="post" action="/api/admin/users">
                         <CsrfInput />
+                        <input type="hidden" name="action" value="update-full" />
                         <input type="hidden" name="locale" value={params.locale} />
                         <input type="hidden" name="userId" value={user.id} />
                         <input name="username" className="rounded border p-2" defaultValue={user.username} required />
@@ -108,7 +109,7 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
                         <label className="flex items-center gap-2 rounded border p-2"><input name="verified" type="checkbox" defaultChecked={!!user.emailVerifiedAt} /> {isUr ? 'تصدیق شدہ' : 'Verified'}</label>
                         <input name="newPassword" type="password" className="rounded border p-2" placeholder={isUr ? 'نیا پاس ورڈ (اختیاری)' : 'New password (optional)'} minLength={8} />
                         <div className="flex items-center gap-2">
-                          <button name="action" value="update-full" className="rounded border p-2">{isUr ? 'محفوظ کریں' : 'Save'}</button>
+                          <button className="rounded border p-2">{isUr ? 'محفوظ کریں' : 'Save'}</button>
                           {user.id !== admin.id ? (
                             <DeleteUserButton isUr={isUr} />
                           ) : null}
