@@ -2,7 +2,21 @@ import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { CsrfInput } from '@/components/csrf-input';
 
-export default async function ProfilePage({ params, searchParams }: { params: { locale: string }; searchParams: { passwordError?: string; passwordUpdated?: string } }) {
+export default async function ProfilePage({
+  params,
+  searchParams
+}: {
+  params: { locale: string };
+  searchParams: {
+    passwordError?: string;
+    passwordUpdated?: string;
+    profileSaved?: string;
+    emailChangeSent?: string;
+    emailChanged?: string;
+    emailChangeError?: string;
+    profileError?: string;
+  };
+}) {
   const user = await getCurrentUser();
   if (!user) redirect(`/${params.locale}/login`);
   const isUr = params.locale === 'ur';
@@ -11,6 +25,31 @@ export default async function ProfilePage({ params, searchParams }: { params: { 
     <main className="mx-auto max-w-2xl space-y-4 p-4">
       <div className="card space-y-2">
         <h1 className="text-2xl font-bold">{isUr ? 'پروفائل ترتیبات' : 'Profile settings'}</h1>
+        {searchParams.profileSaved === '1' ? <p className="text-sm text-green-700">{isUr ? 'پروفائل محفوظ ہو گیا۔' : 'Profile saved.'}</p> : null}
+        {searchParams.emailChangeSent === '1' ? <p className="text-sm text-green-700">{isUr ? 'تصدیقی ای میل نئی ای میل پر بھیج دی گئی ہے۔' : 'Verification email sent to your new email address.'}</p> : null}
+        {searchParams.emailChanged === '1' ? <p className="text-sm text-green-700">{isUr ? 'ای میل کامیابی سے تبدیل ہو گئی۔' : 'Email updated successfully.'}</p> : null}
+        {searchParams.profileError ? (
+          <p className="text-sm text-red-600">
+            {searchParams.profileError === 'email-taken'
+              ? (isUr ? 'یہ ای میل پہلے سے استعمال ہو رہی ہے۔' : 'This email is already in use.')
+              : searchParams.profileError === 'username-taken'
+                ? (isUr ? 'یہ یوزرنیم پہلے سے استعمال ہو رہا ہے۔' : 'This username is already in use.')
+                : searchParams.profileError === 'invalid-input' || searchParams.profileError === 'invalid-password-input'
+                  ? (isUr ? 'فراہم کردہ معلومات درست نہیں ہیں۔' : 'Provided details are invalid.')
+                  : searchParams.profileError === 'email-delivery-failed'
+                    ? (isUr ? 'تصدیقی ای میل نہیں بھیجی جا سکی۔ SMTP سیٹنگز چیک کریں۔' : 'Could not send verification email. Please check SMTP settings.')
+                    : searchParams.profileError === 'duplicate'
+                      ? (isUr ? 'یہ ریکارڈ پہلے سے موجود ہے۔' : 'Duplicate value already exists.')
+                      : (isUr ? 'پروفائل محفوظ کرتے وقت خرابی آ گئی۔' : 'Failed to update profile due to an unexpected error.')}
+          </p>
+        ) : null}
+        {searchParams.emailChangeError ? (
+          <p className="text-sm text-red-600">
+            {searchParams.emailChangeError === 'email-taken'
+              ? (isUr ? 'یہ ای میل پہلے سے استعمال ہو رہی ہے، اس لئے تبدیلی مکمل نہیں ہو سکی۔' : 'That email is already in use, so the change could not be completed.')
+              : (isUr ? 'ای میل تبدیلی کی تصدیق مکمل نہیں ہو سکی۔' : 'Could not complete email change verification.')}
+          </p>
+        ) : null}
         <form className="space-y-2" method="post" action="/api/profile">
           <CsrfInput />
           <input type="hidden" name="action" value="update-profile" />

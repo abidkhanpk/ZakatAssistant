@@ -26,7 +26,7 @@ function TabLink({ locale, tab, activeTab, label }: { locale: string; tab: Tab; 
   );
 }
 
-export default async function AdminPage({ params, searchParams }: { params: { locale: string }; searchParams: { tab?: string; smtpError?: string; smtpErrorMessage?: string; smtpTest?: string; runtimeSaved?: string; runtimeError?: string } }) {
+export default async function AdminPage({ params, searchParams }: { params: { locale: string }; searchParams: { tab?: string; smtpError?: string; smtpErrorMessage?: string; smtpTest?: string; runtimeSaved?: string; runtimeError?: string; userError?: string } }) {
   const admin = await getCurrentUser();
   if (!admin) redirect(`/${params.locale}/login`);
   if (admin.role !== 'ADMIN') redirect(`/${params.locale}/app`);
@@ -58,6 +58,21 @@ export default async function AdminPage({ params, searchParams }: { params: { lo
 
       {activeTab === 'users' ? (
         <>
+          {searchParams.userError ? (
+            <p className="text-sm text-red-600">
+              {searchParams.userError === 'email-taken'
+                ? (isUr ? 'یہ ای میل پہلے سے استعمال ہو رہی ہے۔' : 'This email is already in use.')
+                : searchParams.userError === 'username-taken'
+                  ? (isUr ? 'یہ یوزرنیم پہلے سے استعمال ہو رہا ہے۔' : 'This username is already in use.')
+                  : searchParams.userError === 'invalid-input'
+                    ? (isUr ? 'فراہم کردہ معلومات درست نہیں ہیں۔' : 'Provided user details are invalid.')
+                    : searchParams.userError === 'not-found'
+                      ? (isUr ? 'صارف نہیں ملا۔' : 'User not found.')
+                      : searchParams.userError === 'duplicate'
+                        ? (isUr ? 'یہ ریکارڈ پہلے سے موجود ہے۔' : 'Duplicate value already exists.')
+                        : (isUr ? 'صارف محفوظ کرتے وقت خرابی آ گئی۔' : 'Failed to save user due to an unexpected error.')}
+            </p>
+          ) : null}
           <form className="card grid gap-2 md:grid-cols-2" method="post" action="/api/admin/users">
             <CsrfInput />
             <input type="hidden" name="action" value="create" />
